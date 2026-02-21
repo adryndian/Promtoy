@@ -1,8 +1,0 @@
-{
-  "name": "Reality-First Prompt Master",
-  "description": "High-fidelity reality-focused image prompt generator using Gemini 3 Flash and Gemini 2.5 Flash Image.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}
