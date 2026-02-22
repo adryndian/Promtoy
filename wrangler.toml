@@ -2,13 +2,10 @@ name = "ugc-director-ai"
 pages_build_output_dir = "dist"
 compatibility_date = "2024-02-21"
 
-
 [vars]
 # Environment variables for Cloudflare Pages Functions
 # These will be overridden by the dashboard settings in production
 # But useful for local dev if using wrangler
 CF_ACCOUNT_ID = "2472636ad2b8833398abf45b94a93f6d"
 CF_DATABASE_ID = "26ebaff4-98b3-41d7-86b"
-CLOUDFLARE_ACCOUNT_ID = "2472636ad2b8833398abf45b94a93f6d"
-CLOUDFLARE_DATABASE_ID = "26ebaff4-98b3-41d7-86b"
 # CF_API_TOKEN is sensitive and should be set in the dashboard or .dev.vars locally
