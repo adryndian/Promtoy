@@ -17,7 +17,7 @@ app.use(express.json());
 // Cloudflare D1 Configuration
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "2472636ad2b8833398abf45b94a93f6d";
 const CF_API_TOKEN = process.env.CF_API_TOKEN || "azTPfjWeJOp8j3RY1KLovBVsg2Yu4SRmni6guY-z"; // D1 Token
-const CF_DATABASE_ID = process.env.CF_DATABASE_ID || "26ebaff4-98b3-41d7-86b"; // Updated UUID
+const CF_DATABASE_ID = process.env.CF_DATABASE_ID || "26ebaff4-98b3-41d7-86b9-6887873d261b"; // Updated UUID
 
 const D1_API_URL = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/d1/database/${CF_DATABASE_ID}/query`;
 
