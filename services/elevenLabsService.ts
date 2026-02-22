@@ -36,7 +36,7 @@ export const fetchElevenLabsVoices = async (): Promise<ElevenLabsVoice[]> => {
 
     if (!response.ok) throw new Error('Failed to fetch voices');
     
-    const data = await response.json();
+    const data = await response.json() as any;
     return data.voices.map((v: any) => ({
       voice_id: v.voice_id,
       name: v.name,
@@ -74,7 +74,7 @@ export const generateElevenLabsSpeech = async (text: string, voiceId: string, se
   });
 
   if (!response.ok) {
-    const err = await response.json();
+    const err = await response.json() as any;
     throw new Error(err.detail?.message || "ElevenLabs Generation Failed");
   }
 

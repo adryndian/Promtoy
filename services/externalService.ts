@@ -88,13 +88,13 @@ const fetchGroq = async (payload: any) => {
         if (!response.ok) {
             let errorMsg = `Groq API Error: ${response.status}`;
             try {
-                const err = await response.json();
+                const err = await response.json() as any;
                 if (err.error?.message) errorMsg = err.error.message;
             } catch (e) { }
             throw new Error(errorMsg);
         }
 
-        const data = await response.json();
+        const data = await response.json() as any;
         return data.choices[0].message.content;
     } catch (error: any) {
         console.error("Groq API Request Failed:", error);
@@ -306,11 +306,11 @@ export const analyzeReferenceImage = async (base64Image: string, type: 'face' | 
              });
              
              if (!response.ok) {
-                 const err = await response.json().catch(() => ({}));
+                 const err = await response.json().catch(() => ({})) as any;
                  throw new Error(`Cloudflare Error: ${err.errors?.[0]?.message || response.statusText}`);
              }
 
-             const data = await response.json();
+             const data = await response.json() as any;
              return data.result?.response || "";
 
         } else if (provider === 'groq') {
@@ -346,7 +346,7 @@ export const analyzeReferenceImage = async (base64Image: string, type: 'face' | 
                     max_tokens: 200
                 })
              });
-             const data = await response.json();
+             const data = await response.json() as any;
              return data.choices[0].message.content || "";
         }
     } catch (e) {
@@ -397,7 +397,7 @@ export const analyzeImageForBriefHuggingFace = async (base64Image: string): Prom
         });
 
         if (!response.ok) throw new Error(`HF Error: ${response.status}`);
-        const data = await response.json();
+        const data = await response.json() as any;
         const content = data.choices[0].message.content;
         return JSON.parse(cleanJson(content));
     } catch (error: any) {
@@ -450,11 +450,11 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
         });
 
         if (!response.ok) {
-             const err = await response.json().catch(() => ({}));
+             const err = await response.json().catch(() => ({})) as any;
              throw new Error(`Cloudflare Error: ${err.errors?.[0]?.message || response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as any;
         const content = data.result.response; 
         return JSON.parse(cleanJson(content));
 
@@ -487,11 +487,11 @@ export const generateImageCloudflare = async (prompt: string): Promise<string> =
         });
 
         if (!response.ok) {
-             const err = await response.json().catch(() => ({}));
+             const err = await response.json().catch(() => ({})) as any;
              throw new Error(`CF Image Gen Failed: ${err.errors?.[0]?.message || response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as any;
         return `data:image/jpeg;base64,${data.result.image}`;
     } catch (error: any) {
         console.error("CF Flux Error:", error);
