@@ -4,7 +4,7 @@ import { InputForm } from './components/InputForm';
 import { OutputDisplay } from './components/OutputDisplay';
 import { FormData, GeneratedAsset, ScriptVariation } from './types';
 import { sanitizeInput, generateStrategy as generateStrategyGemini, generateScenes as generateScenesGemini } from './services/geminiService';
-import { saveGeneration, updateGeneration, fetchHistory, deleteGeneration, SavedGeneration } from './services/supabaseService';
+import { saveGeneration, updateGeneration, fetchHistory, deleteGeneration, SavedGeneration } from './services/cloudflareService';
 import { Zap, Check, Info, History as HistoryIcon, X, ChevronRight, Clock, RefreshCw, Settings2, Network, Trash2, CheckCircle2, Cpu } from 'lucide-react';
 import { SettingsModal } from './components/SettingsModal';
 

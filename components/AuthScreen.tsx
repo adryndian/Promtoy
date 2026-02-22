@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../services/supabaseService';
 import { Zap, Mail, Lock, Loader2, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface AuthScreenProps {
@@ -18,14 +17,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
-    try {
-      await signInWithGoogle();
-      // The redirect happens automatically, onAuthSuccess might not trigger immediately 
-      // but the App component will catch the session change.
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in with Google");
-      setLoading(false);
-    }
+    // Mock Auth for Cloudflare Prototype
+    setTimeout(() => {
+        onAuthSuccess();
+        setLoading(false);
+    }, 1000);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -34,20 +30,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     setError(null);
     setMessage(null);
 
-    try {
-      if (isLogin) {
-        await signInWithEmail(email, password);
-        onAuthSuccess(); // Manual trigger if session updates aren't instant
-      } else {
-        await signUpWithEmail(email, password);
-        setMessage("Account created! Please check your email to verify.");
-        setIsLogin(true); // Switch back to login
-      }
-    } catch (err: any) {
-      setError(err.message || "Authentication failed");
-    } finally {
-      setLoading(false);
-    }
+    // Mock Auth for Cloudflare Prototype
+    setTimeout(() => {
+        if (isLogin) {
+            onAuthSuccess();
+        } else {
+            setMessage("Account created! You can now sign in.");
+            setIsLogin(true);
+        }
+        setLoading(false);
+    }, 1000);
   };
 
   return (
