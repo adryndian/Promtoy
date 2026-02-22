@@ -457,7 +457,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                             <option value="gemini-3-flash-preview">Gemini 3 Flash (Fast)</option>
                         </optgroup>
                         <optgroup label="AWS Bedrock">
-                            <option value="meta.llama3-1-70b-instruct-v1:0">Llama 3.1 70B (AWS)</option>
+                            <option value="us.meta.llama4-maverick-17b-instruct-v1:0">Llama 4 Maverick (AWS)</option>
                             <option value="amazon.nova-pro-v1:0">Amazon Nova Pro (AWS)</option>
                         </optgroup>
                         <optgroup label="Other (Groq)">
