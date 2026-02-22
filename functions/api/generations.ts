@@ -7,10 +7,11 @@ interface Env {
   CF_ACCOUNT_ID: string;
   CF_API_TOKEN: string;
   CF_DATABASE_ID: string;
+  DB?: D1Database;
 }
 
 // Helper to execute SQL on D1 via HTTP API (using provided credentials)
-async function executeD1(env: Env, sql: string, params: any[] = []) {
+async function executeD1Rest(env: Env, sql: string, params: any[] = []) {
   const D1_API_URL = `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/d1/database/${env.CF_DATABASE_ID}/query`;
 
   try {
@@ -30,7 +31,8 @@ async function executeD1(env: Env, sql: string, params: any[] = []) {
 
     const data = await response.json() as { success: boolean, errors: any[], result: any[] };
     if (!data.success) {
-      throw new Error(`D1 Query Error: ${JSON.stringify(data.errors)}`);
+      const errorMsg = data.errors && data.errors.length > 0 ? data.errors[0].message : "Unknown D1 Error";
+      throw new Error(`D1 Query Error: ${errorMsg}`);
     }
 
     return data.result[0];
@@ -38,6 +40,23 @@ async function executeD1(env: Env, sql: string, params: any[] = []) {
     console.error("D1 Execution Error:", error);
     throw error;
   }
+}
+
+async function executeD1(env: Env, sql: string, params: any[] = []) {
+    if (env.DB) {
+        // Use Binding
+        try {
+            const stmt = env.DB.prepare(sql).bind(...params);
+            const result = await stmt.all();
+            return result;
+        } catch (e) {
+            console.error("D1 Binding Error:", e);
+            throw e;
+        }
+    } else {
+        // Fallback to REST API
+        return executeD1Rest(env, sql, params);
+    }
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -57,8 +76,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // Parse JSON fields
     const generations = result.results.map((row: any) => ({
       ...row,
-      input_brief: JSON.parse(row.input_brief),
-      output_plan: JSON.parse(row.output_plan)
+      input_brief: typeof row.input_brief === 'string' ? JSON.parse(row.input_brief) : row.input_brief,
+      output_plan: typeof row.output_plan === 'string' ? JSON.parse(row.output_plan) : row.output_plan
     }));
     return new Response(JSON.stringify(generations), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {

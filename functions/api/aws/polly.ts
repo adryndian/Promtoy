@@ -25,14 +25,29 @@ export const onRequestPost: PagesFunction = async (context) => {
 
     const response = await client.send(command);
     
-    // Convert stream to base64
+    // Convert stream to base64 (Cloudflare Worker compatible)
     const stream = response.AudioStream as any;
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
     for await (const chunk of stream) {
         chunks.push(chunk);
     }
-    const buffer = Buffer.concat(chunks);
-    const base64 = buffer.toString("base64");
+    
+    // Concatenate chunks
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    // Convert to base64
+    let binary = '';
+    const len = result.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(result[i]);
+    }
+    const base64 = btoa(binary);
     
     return new Response(JSON.stringify({ audioContent: base64 }), {
       headers: { "Content-Type": "application/json" },

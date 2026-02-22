@@ -16,10 +16,14 @@ app.use(express.json());
 
 // Cloudflare D1 Configuration
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "2472636ad2b8833398abf45b94a93f6d";
-const CF_API_TOKEN = process.env.CF_API_TOKEN || "azTPfjWeJOp8j3RY1KLovBVsg2Yu4SRmni6guY-z";
-const CF_DATABASE_ID = process.env.CF_DATABASE_ID || "26ebaff4-98b3-41d7-86b";
+const CF_API_TOKEN = process.env.CF_API_TOKEN || "azTPfjWeJOp8j3RY1KLovBVsg2Yu4SRmni6guY-z"; // D1 Token
+const CF_DATABASE_ID = process.env.CF_DATABASE_ID || "53d1fdb5-0a08-4067-ad2"; // Updated UUID
 
 const D1_API_URL = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/d1/database/${CF_DATABASE_ID}/query`;
+
+// Cloudflare R2 Configuration
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "ugc-assets";
+const R2_API_TOKEN = process.env.R2_API_TOKEN || "NHDjdg_-ChJYOhQKq_l0gCp_cA363mnyIW3eIhV"; // R2 Token
 
 // Helper to execute SQL on D1
 async function executeD1(sql: string, params: any[] = []) {
@@ -40,14 +44,49 @@ async function executeD1(sql: string, params: any[] = []) {
 
     const data = await response.json() as { success: boolean, errors: any[], result: any[] };
     if (!data.success) {
-      throw new Error(`D1 Query Error: ${JSON.stringify(data.errors)}`);
+      // Handle D1 specific error structure
+      const errorMsg = data.errors && data.errors.length > 0 ? data.errors[0].message : "Unknown D1 Error";
+      throw new Error(`D1 Query Error: ${errorMsg}`);
     }
 
-    return data.result[0]; // D1 returns results in an array, usually first element is the result set
+    // D1 REST API returns results in an array of result sets. 
+    // Usually we want the first result set.
+    return data.result[0]; 
   } catch (error) {
     console.error("D1 Execution Error:", error);
     throw error;
   }
+}
+
+// Helper to upload to R2 via Cloudflare REST API
+async function uploadToR2(key: string, content: Buffer, contentType: string) {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/r2/buckets/${R2_BUCKET_NAME}/objects/${key}`;
+    
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${R2_API_TOKEN}`,
+                'Content-Type': contentType,
+            },
+            body: content
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`R2 Upload Failed: ${response.status} - ${err}`);
+        }
+        
+        const data = await response.json() as any;
+        if (!data.success) {
+             throw new Error(`R2 Upload Error: ${data.errors?.[0]?.message}`);
+        }
+
+        return data.result;
+    } catch (error) {
+        console.error("R2 Upload Error:", error);
+        throw error;
+    }
 }
 
 // AWS Polly Proxy
@@ -123,6 +162,58 @@ app.post("/api/aws/bedrock", async (req, res) => {
     console.error("AWS Bedrock Error:", error);
     res.status(500).json({ error: (error as Error).message });
   }
+});
+
+// Upload to R2 Endpoint
+app.post("/api/upload", async (req, res) => {
+    const { filename, contentBase64, contentType } = req.body;
+    
+    if (!filename || !contentBase64 || !contentType) {
+        return res.status(400).json({ error: "Missing filename, contentBase64, or contentType" });
+    }
+
+    try {
+        const buffer = Buffer.from(contentBase64, 'base64');
+        const key = `${Date.now()}-${filename}`; // Simple unique key
+        
+        await uploadToR2(key, buffer, contentType);
+        
+        res.json({ success: true, key, url: `/api/assets/${key}` });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message });
+    }
+});
+
+// Serve Asset from R2 Proxy
+app.get("/api/assets/:key", async (req, res) => {
+    const { key } = req.params;
+    const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/r2/buckets/${R2_BUCKET_NAME}/objects/${key}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${R2_API_TOKEN}`,
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 404) return res.status(404).send("Not Found");
+            throw new Error(`R2 Fetch Failed: ${response.status}`);
+        }
+
+        // Forward headers
+        const contentType = response.headers.get('content-type');
+        if (contentType) res.setHeader('Content-Type', contentType);
+        
+        // Stream body
+        // node-fetch body is a Node.js Readable stream
+        (response.body as any).pipe(res);
+
+    } catch (error) {
+        console.error("Asset Proxy Error:", error);
+        res.status(500).send("Error fetching asset");
+    }
 });
 
 // Initialize Database Table

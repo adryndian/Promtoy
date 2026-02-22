@@ -5,6 +5,7 @@ import { OutputDisplay } from './components/OutputDisplay';
 import { FormData, GeneratedAsset, ScriptVariation } from './types';
 import { sanitizeInput, generateStrategy as generateStrategyGemini, generateScenes as generateScenesGemini } from './services/geminiService';
 import { generateStrategyBedrock, generateScenesBedrock } from './services/awsService';
+import { generateStrategyGroq, generateScenesGroq } from './services/externalService';
 import { saveGeneration, updateGeneration, fetchHistory, deleteGeneration, SavedGeneration } from './services/cloudflareService';
 import { Zap, Check, Info, History as HistoryIcon, X, ChevronRight, Clock, RefreshCw, Settings2, Network, Trash2, CheckCircle2, Cpu } from 'lucide-react';
 import { SettingsModal } from './components/SettingsModal';
@@ -88,11 +89,15 @@ const App: React.FC = () => {
       
       const sanitizePromise = rawText ? sanitizeInput(rawText) : Promise.resolve(null);
       
-      // Step 1: Generate Strategy (Gemini or AWS)
+      // Step 1: Generate Strategy (Gemini, AWS, or Groq)
       let strategyPromise;
       const selectedModel = formData.constraints.ai_model || 'gemini-3-pro-preview';
 
-      if (selectedModel.includes('llama') || selectedModel.includes('amazon')) {
+      if (selectedModel.includes('llama') && !selectedModel.includes('meta.')) {
+          // Groq Models (e.g. llama-3.3-70b-versatile, deepseek-r1-distill-llama-70b)
+          // Note: AWS Llama models start with 'meta.'
+          strategyPromise = generateStrategyGroq(formData, rawText);
+      } else if (selectedModel.includes('meta.') || selectedModel.includes('amazon') || selectedModel.includes('anthropic')) {
           // Use AWS Bedrock
           strategyPromise = generateStrategyBedrock(formData, rawText, selectedModel);
       } else {
@@ -125,9 +130,11 @@ const App: React.FC = () => {
         if (i === 1) variationHint = "Create an alternative version. Try a bolder, more controversial hook or a different visual pacing style.";
         if (i === 2) variationHint = "Create a third distinct version. Focus heavily on 'Show, Don't Tell' with a completely different opening scene.";
 
-        // Call the generator (Gemini or AWS)
+        // Call the generator (Gemini, AWS, or Groq)
         let scenesPromise;
-        if (selectedModel.includes('llama') || selectedModel.includes('amazon')) {
+        if (selectedModel.includes('llama') && !selectedModel.includes('meta.')) {
+             scenesPromise = generateScenesGroq(formData, draftResult, variationHint);
+        } else if (selectedModel.includes('meta.') || selectedModel.includes('amazon') || selectedModel.includes('anthropic')) {
              scenesPromise = generateScenesBedrock(formData, draftResult, variationHint, selectedModel);
         } else {
              scenesPromise = generateScenesGemini(formData, draftResult, variationHint);

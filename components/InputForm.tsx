@@ -4,7 +4,7 @@ import { FormData } from '../types';
 import { Sparkles, Type, Tag, Smartphone, FileText, Loader2, Image as ImageIcon, Globe, Settings2, Cpu, Zap, Layers, CheckCircle2, Clock, Palette, Camera, Sun, Paintbrush, Split, Smile, Move, Gauge, Cloud, User, Shirt, Eye, Lock } from 'lucide-react';
 import { analyzeImageForBrief } from '../services/geminiService';
 import { analyzeImageForBriefHuggingFace, analyzeImageForBriefCloudflare, analyzeReferenceImage, analyzeImageForBriefGroq, getStoredHuggingFaceKey, getStoredCloudflareId, getStoredGroqKey, getStoredAwsAccessKey } from '../services/externalService';
-import { analyzeImageBedrock } from '../services/awsService';
+import { analyzeImageBedrock, analyzeReferenceImageBedrock } from '../services/awsService';
 
 interface InputFormProps {
   onSubmit: (data: FormData) => void;
@@ -117,7 +117,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                     console.log("Using Groq Llama 3.2 Vision");
                     analysis = await analyzeImageForBriefGroq(base64String);
                 } else if (visionProvider === 'aws') {
-                    console.log("Using AWS Bedrock Claude 4.6 Sonnet");
+                    console.log("Using AWS Bedrock Claude 3 Sonnet");
                     analysis = await analyzeImageBedrock(base64String, mimeType);
                 } else {
                     console.log("Using Gemini Pro Vision");
@@ -186,8 +186,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
              if (e.target) e.target.value = '';
              return;
          }
-         // If in Gemini mode but trying to use CF (default fallback), check CF key. 
-         // If CF key missing, we will fallback to Gemini inside the service logic catch block or here.
     }
 
     setIsAnalyzingRef(true);
@@ -196,7 +194,13 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
         const base64String = (reader.result as string).split(',')[1];
         
         try {
-            let description = await analyzeReferenceImage(base64String, type, providerToUse as 'huggingface' | 'cloudflare' | 'groq');
+            let description = "";
+            
+            if (providerToUse === 'aws') {
+                description = await analyzeReferenceImageBedrock(base64String, type);
+            } else {
+                description = await analyzeReferenceImage(base64String, type, providerToUse as 'huggingface' | 'cloudflare' | 'groq');
+            }
             
             if (!description && visionProvider === 'gemini') {
                  // Fallback if HF/CF failed or keys missing
@@ -258,6 +262,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                 
                 {/* Role Model (Moved Inside) */}
                 <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/50 backdrop-blur-sm border border-slate-200 shadow-sm transition-all hover:bg-white/80 ml-2 group/lock">
+                     <span className="text-[10px] font-bold text-slate-400 pl-2 uppercase tracking-wider hidden sm:inline-block">Role Lock</span>
                      <input type="file" ref={faceInputRef} accept="image/*" className="hidden" onChange={(e) => handleReferenceUpload(e, 'face')} />
                      <input type="file" ref={outfitInputRef} accept="image/*" className="hidden" onChange={(e) => handleReferenceUpload(e, 'outfit')} />
 
@@ -457,8 +462,8 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                             <option value="gemini-3-flash-preview">Gemini 3 Flash (Fast)</option>
                         </optgroup>
                         <optgroup label="AWS Bedrock">
-                            <option value="us.meta.llama4-maverick-17b-instruct-v1:0">Llama 4 Maverick (AWS)</option>
-                            <option value="us.anthropic.claude-sonnet-4-6">Claude Sonnet 4.6 (AWS)</option>
+                            <option value="meta.llama3-1-70b-instruct-v1:0">Llama 3.1 70B (AWS)</option>
+                            <option value="us.anthropic.claude-3-5-sonnet-20241022-v2:0">Claude 3.5 Sonnet (AWS)</option>
                         </optgroup>
                         <optgroup label="Other (Groq)">
                             <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
@@ -483,10 +488,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                             <option value="imagen-3.0-generate-001">Imagen 3 (Photorealistic)</option>
                         </optgroup>
                         <optgroup label="AWS Bedrock">
-                            <option value="aws-titan">AWS Titan G1 v2</option>
-                            <option value="aws-sdxl">AWS SDXL 1.0</option>
-                            <option value="aws-sd3">AWS SD3 Large</option>
-                            <option value="aws-ultra">AWS Ultra</option>
+                            <option value="amazon.titan-image-generator-v2:0">Titan Image Gen v2</option>
+                            <option value="amazon.nova-canvas-v1:0">Amazon Nova Canvas</option>
+                            <option value="stability.sd3-large-v1:0">SD3 Large</option>
                         </optgroup>
                         <optgroup label="Cloudflare (New)">
                              <option value="cf-flux-schnell">Flux 1 Schnell (Cloudflare)</option>

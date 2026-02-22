@@ -6,7 +6,7 @@ export const analyzeImageBedrock = async (base64Image: string, mimeType: string 
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
-    const modelId = "us.anthropic.claude-sonnet-4-6"; // Claude 3 Sonnet
+    const modelId = "anthropic.claude-3-sonnet-20240229-v1:0"; // Claude 3 Sonnet
 
     if (!accessKeyId || !secretAccessKey) {
         throw new Error("AWS Credentials missing. Please check Settings.");
@@ -111,14 +111,22 @@ export const generateImageBedrock = async (prompt: string, modelId: string = "am
           seed: Math.floor(Math.random() * 2147483647),
         },
       };
-  } else if (modelId.includes("stability.stable-diffusion-xl")) {
+  } else if (modelId.includes("amazon.nova")) {
+      // Nova Canvas (Converse style or specific body)
+      // Nova Canvas uses "textToImageParams" similar to Titan but slightly different schema in some versions.
+      // However, the standard Nova Canvas body is:
       body = {
-        text_prompts: [{ text: prompt }],
-        cfg_scale: 10,
-        steps: 30,
-        seed: Math.floor(Math.random() * 2147483647),
+          taskType: "TEXT_IMAGE",
+          textToImageParams: { text: prompt },
+          imageGenerationConfig: {
+              numberOfImages: 1,
+              height: 1024,
+              width: 1024,
+              cfgScale: 8.0,
+              seed: Math.floor(Math.random() * 2147483647)
+          }
       };
-  } else if (modelId.includes("stability.sd3-large") || modelId.includes("stability.stable-image-ultra")) {
+  } else if (modelId.includes("stability.sd3")) {
       body = {
         prompt: prompt,
         mode: "text-to-image",
@@ -150,11 +158,9 @@ export const generateImageBedrock = async (prompt: string, modelId: string = "am
     const data = await response.json() as any;
     
     // Handle different response formats
-    if (modelId.startsWith("amazon.titan")) {
+    if (modelId.startsWith("amazon.titan") || modelId.includes("amazon.nova")) {
         return `data:image/png;base64,${data.images[0]}`;
-    } else if (modelId.includes("stability.stable-diffusion-xl")) {
-        return `data:image/png;base64,${data.artifacts[0].base64}`;
-    } else if (modelId.includes("stability.sd3-large") || modelId.includes("stability.stable-image-ultra")) {
+    } else if (modelId.includes("stability.sd3")) {
         return `data:image/png;base64,${data.images[0]}`;
     }
     
@@ -213,7 +219,7 @@ const generateSpeechPolly = async (text: string, voiceId: string): Promise<strin
 
 import { FormData, GeneratedAsset } from "../types";
 
-export const generateStrategyBedrock = async (formData: FormData, contextText: string, modelId: string = "us.meta.llama4-maverick-17b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
+export const generateStrategyBedrock = async (formData: FormData, contextText: string, modelId: string = "meta.llama3-1-70b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
@@ -275,13 +281,20 @@ ${userPrompt}
             top_p: 0.9
         };
     } else if (modelId.includes("amazon.nova")) {
-         // Nova format (similar to Bedrock Converse API, but InvokeModel uses specific schema)
-         // For Nova, it's best to use Converse API, but our proxy uses InvokeModel.
-         // Nova InvokeModel body:
          body = {
              system: [{ text: systemPrompt }],
              messages: [{ role: "user", content: [{ text: userPrompt }] }],
              inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 }
+         };
+    } else if (modelId.includes("anthropic.claude")) {
+         body = {
+             anthropic_version: "bedrock-2023-05-31",
+             max_tokens: 4096,
+             system: systemPrompt,
+             messages: [
+                 { role: "user", content: userPrompt }
+             ],
+             temperature: 0.7
          };
     } else {
         // Default to Llama style or error
@@ -313,6 +326,8 @@ ${userPrompt}
             jsonString = data.generation;
         } else if (modelId.includes("amazon.nova")) {
             jsonString = data.output.message.content[0].text;
+        } else if (modelId.includes("anthropic.claude")) {
+            jsonString = data.content[0].text;
         }
 
         const clean = jsonString.replace(/```json\s*|\s*```/g, '').trim();
@@ -324,7 +339,7 @@ ${userPrompt}
     }
 };
 
-export const generateScenesBedrock = async (formData: FormData, strategy: Partial<GeneratedAsset>, variationHint?: string, modelId: string = "us.meta.llama4-maverick-17b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
+export const generateScenesBedrock = async (formData: FormData, strategy: Partial<GeneratedAsset>, variationHint?: string, modelId: string = "meta.llama3-1-70b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
@@ -385,6 +400,16 @@ ${userPrompt}
              messages: [{ role: "user", content: [{ text: userPrompt }] }],
              inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 }
          };
+    } else if (modelId.includes("anthropic.claude")) {
+         body = {
+             anthropic_version: "bedrock-2023-05-31",
+             max_tokens: 4096,
+             system: systemPrompt,
+             messages: [
+                 { role: "user", content: userPrompt }
+             ],
+             temperature: 0.7
+         };
     }
 
     try {
@@ -412,6 +437,8 @@ ${userPrompt}
             jsonString = data.generation;
         } else if (modelId.includes("amazon.nova")) {
             jsonString = data.output.message.content[0].text;
+        } else if (modelId.includes("anthropic.claude")) {
+            jsonString = data.content[0].text;
         }
 
         const clean = jsonString.replace(/```json\s*|\s*```/g, '').trim();
@@ -419,6 +446,71 @@ ${userPrompt}
 
     } catch (error) {
         console.error("Bedrock Scenes Error:", error);
+        throw error;
+    }
+};
+
+export const analyzeReferenceImageBedrock = async (base64Image: string, type: 'face' | 'outfit'): Promise<string> => {
+    const accessKeyId = getStoredAwsAccessKey().trim();
+    const secretAccessKey = getStoredAwsSecretKey().trim();
+    const region = getStoredAwsRegion().trim();
+    const modelId = "anthropic.claude-3-sonnet-20240229-v1:0"; // Use Sonnet for vision
+
+    if (!accessKeyId || !secretAccessKey) {
+        throw new Error("AWS Credentials missing.");
+    }
+
+    const prompt = type === 'face' 
+        ? "Describe this person's physical appearance in one detailed sentence (age, ethnicity, hair style/color, specific features). Do not mention expression."
+        : "Describe this outfit in one detailed sentence (color, fabric, style, specific garments).";
+
+    const body = {
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: 300,
+        messages: [
+            {
+                role: "user",
+                content: [
+                    {
+                        type: "image",
+                        source: {
+                            type: "base64",
+                            media_type: "image/jpeg",
+                            data: base64Image
+                        }
+                    },
+                    {
+                        type: "text",
+                        text: prompt
+                    }
+                ]
+            }
+        ]
+    };
+
+    try {
+        const response = await fetch(AWS_PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                region,
+                accessKeyId,
+                secretAccessKey,
+                modelId,
+                body
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json() as any;
+            throw new Error(err.error || 'AWS Bedrock Reference Analysis Failed');
+        }
+
+        const data = await response.json() as any;
+        return data.content[0].text;
+
+    } catch (error) {
+        console.error("AWS Bedrock Ref Analysis Error:", error);
         throw error;
     }
 };
