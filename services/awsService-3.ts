@@ -6,7 +6,7 @@ export const analyzeImageBedrock = async (base64Image: string, mimeType: string 
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
-    const modelId = "anthropic.claude-3-sonnet-20240229-v1:0"; // Claude 3 Sonnet
+    const modelId = "us.anthropic.claude-sonnet-4-6"; // Claude 3 Sonnet
 
     if (!accessKeyId || !secretAccessKey) {
         throw new Error("AWS Credentials missing. Please check Settings.");
@@ -213,7 +213,7 @@ const generateSpeechPolly = async (text: string, voiceId: string): Promise<strin
 
 import { FormData, GeneratedAsset } from "../types";
 
-export const generateStrategyBedrock = async (formData: FormData, contextText: string, modelId: string = "meta.llama3-1-70b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
+export const generateStrategyBedrock = async (formData: FormData, contextText: string, modelId: string = "us.meta.llama4-maverick-17b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
@@ -324,7 +324,7 @@ ${userPrompt}
     }
 };
 
-export const generateScenesBedrock = async (formData: FormData, strategy: Partial<GeneratedAsset>, variationHint?: string, modelId: string = "meta.llama3-1-70b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
+export const generateScenesBedrock = async (formData: FormData, strategy: Partial<GeneratedAsset>, variationHint?: string, modelId: string = "us.meta.llama4-maverick-17b-instruct-v1:0"): Promise<Partial<GeneratedAsset>> => {
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
