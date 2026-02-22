@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Key, ExternalLink, Save, Check, Zap, Cpu, Mic, Smile, Cloud } from 'lucide-react';
-import { getStoredHuggingFaceKey, setStoredHuggingFaceKey, getStoredGroqKey, setStoredGroqKey, getStoredCloudflareId, setStoredCloudflareId, getStoredCloudflareToken, setStoredCloudflareToken } from '../services/externalService';
+import { X, Key, ExternalLink, Save, Check, Zap, Cpu, Mic, Smile, Cloud, Info } from 'lucide-react';
+import { getStoredHuggingFaceKey, setStoredHuggingFaceKey, getStoredGroqKey, setStoredGroqKey, getStoredCloudflareId, setStoredCloudflareId, getStoredCloudflareToken, setStoredCloudflareToken, getStoredAwsAccessKey, setStoredAwsAccessKey, getStoredAwsSecretKey, setStoredAwsSecretKey, getStoredAwsRegion, setStoredAwsRegion } from '../services/externalService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,8 +13,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [groqKey, setGroqKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [elevenLabsKey, setElevenLabsKey] = useState('');
+  const [togetherKey, setTogetherKey] = useState('');
+  const [dashscopeKey, setDashscopeKey] = useState('');
   const [cloudflareId, setCloudflareId] = useState('');
   const [cloudflareToken, setCloudflareToken] = useState('');
+  const [awsAccessKey, setAwsAccessKey] = useState('');
+  const [awsSecretKey, setAwsSecretKey] = useState('');
+  const [awsRegion, setAwsRegion] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -31,6 +36,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
       setGeminiKey(localStorage.getItem('GEMINI_API_KEY') || '');
       setElevenLabsKey(localStorage.getItem('ELEVENLABS_API_KEY') || '');
+      setTogetherKey(localStorage.getItem('TOGETHER_API_KEY') || '');
+      setDashscopeKey(localStorage.getItem('DASHSCOPE_API_KEY') || '');
+
+      setAwsAccessKey(getStoredAwsAccessKey());
+      setAwsSecretKey(getStoredAwsSecretKey());
+      setAwsRegion(getStoredAwsRegion());
     }
   }, [isOpen]);
 
@@ -39,6 +50,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setStoredGroqKey(groqKey);
     setStoredCloudflareId(cloudflareId);
     setStoredCloudflareToken(cloudflareToken);
+    setStoredAwsAccessKey(awsAccessKey);
+    setStoredAwsSecretKey(awsSecretKey);
+    setStoredAwsRegion(awsRegion);
     
     if (geminiKey.trim()) {
         localStorage.setItem('GEMINI_API_KEY', geminiKey.trim());
@@ -50,6 +64,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         localStorage.setItem('ELEVENLABS_API_KEY', elevenLabsKey.trim());
     } else {
         localStorage.removeItem('ELEVENLABS_API_KEY');
+    }
+
+    if (togetherKey.trim()) {
+        localStorage.setItem('TOGETHER_API_KEY', togetherKey.trim());
+    } else {
+        localStorage.removeItem('TOGETHER_API_KEY');
+    }
+
+    if (dashscopeKey.trim()) {
+        localStorage.setItem('DASHSCOPE_API_KEY', dashscopeKey.trim());
+    } else {
+        localStorage.removeItem('DASHSCOPE_API_KEY');
     }
 
     setSaved(true);
@@ -134,6 +160,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
              </div>
           </div>
 
+          {/* AWS Bedrock Section */}
+          <div className="space-y-3 pb-6 border-b border-slate-100">
+             <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Cloud className="w-4 h-4 text-blue-600" />
+                    <label className="text-sm font-bold text-slate-700">AWS Bedrock</label>
+                </div>
+                <a href="https://console.aws.amazon.com/iam/home" target="_blank" rel="noreferrer" className="text-[10px] text-brand-600 hover:underline flex items-center gap-1">
+                   Get Keys <ExternalLink className="w-3 h-3" />
+                </a>
+             </div>
+             <p className="text-[11px] text-slate-500 leading-relaxed">
+                Titan Image Generator & Nova Reel (Video).
+             </p>
+             <div className="space-y-2">
+                <input 
+                  type="text" 
+                  value={awsAccessKey}
+                  onChange={(e) => setAwsAccessKey(e.target.value)}
+                  placeholder="AWS Access Key ID"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder-slate-400"
+                />
+                <input 
+                  type="password" 
+                  value={awsSecretKey}
+                  onChange={(e) => setAwsSecretKey(e.target.value)}
+                  placeholder="AWS Secret Access Key"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder-slate-400"
+                />
+                <input 
+                  type="text" 
+                  value={awsRegion}
+                  onChange={(e) => setAwsRegion(e.target.value)}
+                  placeholder="Region (e.g. us-west-2)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder-slate-400"
+                />
+             </div>
+          </div>
+
           {/* Cloudflare Section */}
           <div className="space-y-3 pb-6 border-b border-slate-100">
              <div className="flex justify-between items-center">
@@ -191,6 +256,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
              </div>
           </div>
 
+          {/* Together AI Section */}
+          <div className="space-y-3 pb-6 border-b border-slate-100">
+             <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-blue-500" />
+                    <label className="text-sm font-bold text-slate-700">Together AI</label>
+                </div>
+                <a href="https://api.together.xyz/settings/api-keys" target="_blank" rel="noreferrer" className="text-[10px] text-brand-600 hover:underline flex items-center gap-1">
+                   Get Key <ExternalLink className="w-3 h-3" />
+                </a>
+             </div>
+             <p className="text-[11px] text-slate-500 leading-relaxed">
+                Supports FLUX.1 and Llama models.
+             </p>
+             <div className="relative">
+                <input 
+                  type="password" 
+                  value={togetherKey}
+                  onChange={(e) => setTogetherKey(e.target.value)}
+                  placeholder="together_..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors placeholder-slate-400"
+                />
+             </div>
+          </div>
+
+          {/* Dashscope (Qwen) Section */}
+          <div className="space-y-3 pb-6 border-b border-slate-100">
+             <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Cloud className="w-4 h-4 text-purple-600" />
+                    <label className="text-sm font-bold text-slate-700">Dashscope (Qwen/Wanx)</label>
+                </div>
+                <a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" rel="noreferrer" className="text-[10px] text-brand-600 hover:underline flex items-center gap-1">
+                   Get Key <ExternalLink className="w-3 h-3" />
+                </a>
+             </div>
+             <p className="text-[11px] text-slate-500 leading-relaxed">
+                Alibaba Cloud models: Qwen, Wanx (Image/Video), CosyVoice.
+             </p>
+             <div className="relative">
+                <input 
+                  type="password" 
+                  value={dashscopeKey}
+                  onChange={(e) => setDashscopeKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-purple-500 focus:bg-white transition-colors placeholder-slate-400"
+                />
+             </div>
+          </div>
+
           {/* ElevenLabs Section */}
           <div className="space-y-3 pb-2">
              <div className="flex justify-between items-center">
@@ -214,6 +329,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white transition-colors placeholder-slate-400"
                 />
              </div>
+          </div>
+
+          {/* Help / Troubleshooting */}
+          <div className="mt-8 pt-6 border-t border-slate-100">
+              <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-slate-400" />
+                  <h3 className="text-sm font-bold text-slate-700">Troubleshooting Guide</h3>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4 text-[11px] text-slate-600 space-y-2 leading-relaxed border border-slate-200">
+                  <p><strong>Hugging Face:</strong> Ensure your token has `read` permissions. For FLUX.1-dev, you must accept the license agreement on the model page first. If it fails, try SDXL.</p>
+                  <p><strong>Cloudflare:</strong> Verify your Account ID and API Token have `Workers AI` permissions. The `Flux 1 Schnell` model is currently in beta on CF.</p>
+                  <p><strong>AWS Bedrock:</strong> Ensure your IAM user has `BedrockFullAccess` policy and you have requested model access in the AWS Bedrock Console (us-west-2 region recommended).</p>
+              </div>
           </div>
 
           <button 

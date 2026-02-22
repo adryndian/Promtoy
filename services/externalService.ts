@@ -37,6 +37,24 @@ export const setStoredCloudflareToken = (token: string) => {
     else localStorage.removeItem('CLOUDFLARE_API_TOKEN');
 };
 
+export const getStoredAwsAccessKey = () => localStorage.getItem('AWS_ACCESS_KEY_ID') || "";
+export const setStoredAwsAccessKey = (key: string) => {
+    if (key) localStorage.setItem('AWS_ACCESS_KEY_ID', key);
+    else localStorage.removeItem('AWS_ACCESS_KEY_ID');
+};
+
+export const getStoredAwsSecretKey = () => localStorage.getItem('AWS_SECRET_ACCESS_KEY') || "";
+export const setStoredAwsSecretKey = (key: string) => {
+    if (key) localStorage.setItem('AWS_SECRET_ACCESS_KEY', key);
+    else localStorage.removeItem('AWS_SECRET_ACCESS_KEY');
+};
+
+export const getStoredAwsRegion = () => localStorage.getItem('AWS_REGION') || "us-west-2";
+export const setStoredAwsRegion = (region: string) => {
+    if (region) localStorage.setItem('AWS_REGION', region);
+    else localStorage.removeItem('AWS_REGION');
+};
+
 const cleanJson = (text: string): string => {
   if (!text) return "{}";
   let clean = text.trim();

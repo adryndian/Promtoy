@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { GeneratedAsset, Scene } from '../types';
 import { generateSpeech, getWavBlob, analyzeVoiceStyle, generateImagePreview, generateVideo } from '../services/geminiService';
 import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudflare } from '../services/externalService';
+import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
+import { generateImageBedrock, generateSpeechBedrock } from '../services/awsService';
 import { fetchElevenLabsVoices, generateElevenLabsSpeech, ElevenLabsVoice, ELEVENLABS_MODELS, ElevenLabsSettings } from '../services/elevenLabsService';
 import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
@@ -19,8 +21,10 @@ const SPEECH_STYLES = [
   'Friendly'
 ];
 
+const POLLY_VOICES = ['Joanna', 'Matthew', 'Ivy', 'Justin', 'Joey', 'Salli', 'Kimberly', 'Kendra', 'Raveena', 'Aditi', 'Emma', 'Brian', 'Amy', 'Arthur'];
+
 type AspectRatio = "9:16" | "16:9" | "1:1";
-type TTSProvider = 'gemini' | 'elevenlabs';
+type TTSProvider = 'gemini' | 'elevenlabs' | 'aws';
 
 interface OutputDisplayProps {
     data: GeneratedAsset | null;
@@ -159,6 +163,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
       
       if (provider === 'gemini') {
           setActiveVoice('Kore');
+      } else if (provider === 'aws') {
+          setActiveVoice('Joanna');
       } else if (provider === 'elevenlabs' && elevenLabsVoices.length > 0) {
            setActiveVoice(elevenLabsVoices[0].voice_id);
       } else if (provider === 'elevenlabs' && !hasElevenLabsKey) {
@@ -243,6 +249,9 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
              reader.readAsDataURL(blob);
              await new Promise(resolve => reader.onloadend = resolve);
              url = reader.result as string;
+        } else if (ttsProvider === 'aws') {
+             const b64 = await generateSpeechBedrock(text, activeVoice);
+             url = b64; // Already base64 data URI
         } else {
              const blobUrl = await generateElevenLabsSpeech(text, activeVoice, elSettings);
              const blob = await fetch(blobUrl).then(r => r.blob());
@@ -300,6 +309,19 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
           
           if (activeImageModel === 'cf-flux-schnell') {
                imageUrl = await generateImageCloudflare(promptToUse);
+          } else if (activeImageModel.startsWith('aws-') || activeImageModel.startsWith('amazon.') || activeImageModel.startsWith('stability.')) {
+               // Map short names to full IDs if needed, or pass through
+               let modelId = activeImageModel;
+               if (activeImageModel === 'aws-titan') modelId = "amazon.titan-image-generator-v2:0";
+               if (activeImageModel === 'aws-sdxl') modelId = "stability.stable-diffusion-xl-v1:0";
+               if (activeImageModel === 'aws-sd3') modelId = "stability.sd3-large-v1:0";
+               if (activeImageModel === 'aws-ultra') modelId = "stability.stable-image-ultra-v1:0";
+               
+               imageUrl = await generateImageBedrock(promptToUse, modelId);
+          } else if (activeImageModel === 'together-flux') {
+              imageUrl = await generateImageTogether(promptToUse);
+          } else if (activeImageModel === 'dashscope-wanx') {
+              imageUrl = await generateImageDashscope(promptToUse);
           } else if (activeImageModel.startsWith('hf-')) {
               const hfModel = activeImageModel === 'hf-sdxl' ? "stabilityai/stable-diffusion-xl-base-1.0" : "black-forest-labs/FLUX.1-dev";
               imageUrl = await generateImageHuggingFace(promptToUse, hfModel);
@@ -342,6 +364,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
          if (activeVideoModel === 'hf-cogvideo') {
              // Fallback to HF video logic if model selected
              videoUrl = await generateVideoHuggingFace(promptToUse); 
+         } else if (activeVideoModel === 'dashscope-wanx-video') {
+             videoUrl = await generateVideoDashscope(promptToUse);
          } else {
              // Default Veo (Gemini) - Pass activeVideoModel (e.g. 'veo-3.1-generate-preview' or 'veo-3.1-fast-generate-preview')
              videoUrl = await generateVideo(promptToUse, activeVideoModel);
@@ -588,6 +612,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                 <Mic className="w-3.5 h-3.5" />
                 <div className="flex items-center gap-1 bg-white rounded p-0.5 border border-slate-200 shadow-sm">
                     <button onClick={() => handleProviderChange('gemini')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'gemini' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Gemini</button>
+                    <button onClick={() => handleProviderChange('aws')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'aws' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>AWS Polly</button>
                     <button onClick={() => handleProviderChange('elevenlabs')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'elevenlabs' ? 'bg-orange-500/80 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>ElevenLabs</button>
                 </div>
                 <span className="text-brand-300">|</span>
@@ -595,6 +620,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                     <span className="text-brand-800/70 uppercase font-bold tracking-wider">Voice:</span>
                     <select value={activeVoice} onChange={(e) => handleVoiceChange(e.target.value)} className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-brand-600 transition-colors max-w-[100px] truncate">
                     {ttsProvider === 'gemini' ? GEMINI_VOICES.map(v => <option key={v} value={v} className="bg-white text-slate-800">{v}</option>) 
+                    : ttsProvider === 'aws' ? POLLY_VOICES.map(v => <option key={v} value={v} className="bg-white text-slate-800">{v}</option>)
                     : elevenLabsVoices.length > 0 ? elevenLabsVoices.map(v => <option key={v.voice_id} value={v.voice_id} className="bg-white text-slate-800">{v.name}</option>)
                     : <option className="bg-white text-slate-400">Loading/No Key...</option>}
                     </select>
@@ -615,9 +641,15 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                           <option value="gemini-3-pro-image-preview">Gemini 3 Pro</option>
                           <option value="gemini-2.5-flash-image">Gemini 2.5</option>
                           <option value="imagen-3.0-generate-001">Imagen 3</option>
+                          <option value="aws-titan">AWS Titan G1 v2</option>
+                          <option value="aws-sdxl">AWS SDXL 1.0</option>
+                          <option value="aws-sd3">AWS SD3 Large</option>
+                          <option value="aws-ultra">AWS Ultra</option>
                           <option value="cf-flux-schnell">Cloudflare Flux</option>
                           <option value="hf-flux-dev">HuggingFace FLUX</option>
                           <option value="hf-sdxl">HuggingFace SDXL</option>
+                          <option value="together-flux">Together FLUX</option>
+                          <option value="dashscope-wanx">Dashscope Wanx</option>
                        </select>
                    </div>
                    <span className="text-purple-300">|</span>
@@ -632,6 +664,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                           <option value="veo-3.1-fast-generate-preview">Veo Fast</option>
                           <option value="veo-3.1-generate-preview">Veo (Quality)</option>
                           <option value="hf-cogvideo">HF CogVideo</option>
+                          <option value="dashscope-wanx-video">Dashscope Wanx</option>
                        </select>
                    </div>
                 </div>
@@ -871,6 +904,11 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                                                 <button onClick={() => handleGeneratePreview(scene, idx)} className="px-2 py-1 bg-white/90 hover:bg-white text-slate-800 text-[10px] font-bold rounded shadow-sm backdrop-blur flex items-center gap-1">
                                                     <RefreshCw className="w-3 h-3" /> Regen
                                                 </button>
+                                                {(structuredPrompts?.video_prompt || scene.video_prompt) && (
+                                                    <button onClick={() => handleGenerateVideo(scene, idx)} className="px-2 py-1 bg-indigo-600/90 hover:bg-indigo-600 text-white text-[10px] font-bold rounded shadow-sm backdrop-blur flex items-center gap-1">
+                                                        <VideoIcon className="w-3 h-3" /> Video
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -992,7 +1030,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                                         ) : (
                                             <>
                                             {ttsProvider === 'elevenlabs' ? <Volume2 className="w-4 h-4"/> : <Play className="w-4 h-4 fill-current"/>} 
-                                            {audioUrls[cacheKey] ? 'Play Voiceover' : `Generate Audio (${ttsProvider === 'elevenlabs' ? '11Labs' : 'Gemini'})`}
+                                            {audioUrls[cacheKey] ? 'Play Voiceover' : `Generate Audio (${ttsProvider === 'elevenlabs' ? '11Labs' : ttsProvider === 'aws' ? 'AWS' : 'Gemini'})`}
                                             </>
                                         )}
                                     </button>

@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FormData } from '../types';
 import { Sparkles, Type, Tag, Smartphone, FileText, Loader2, Image as ImageIcon, Globe, Settings2, Cpu, Zap, Layers, CheckCircle2, Clock, Palette, Camera, Sun, Paintbrush, Split, Smile, Move, Gauge, Cloud, User, Shirt, Eye, Lock } from 'lucide-react';
 import { analyzeImageForBrief } from '../services/geminiService';
-import { analyzeImageForBriefHuggingFace, analyzeImageForBriefCloudflare, analyzeReferenceImage, analyzeImageForBriefGroq, getStoredHuggingFaceKey, getStoredCloudflareId, getStoredGroqKey } from '../services/externalService';
+import { analyzeImageForBriefHuggingFace, analyzeImageForBriefCloudflare, analyzeReferenceImage, analyzeImageForBriefGroq, getStoredHuggingFaceKey, getStoredCloudflareId, getStoredGroqKey, getStoredAwsAccessKey } from '../services/externalService';
+import { analyzeImageBedrock } from '../services/awsService';
 
 interface InputFormProps {
   onSubmit: (data: FormData) => void;
@@ -27,7 +28,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
   const [data, setData] = useState<FormData>(defaultData);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [isAnalyzingRef, setIsAnalyzingRef] = useState(false);
-  const [visionProvider, setVisionProvider] = useState<'gemini' | 'huggingface' | 'cloudflare' | 'groq'>('gemini');
+  const [visionProvider, setVisionProvider] = useState<'gemini' | 'huggingface' | 'cloudflare' | 'groq' | 'aws'>('gemini');
   const [lockToast, setLockToast] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +78,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
       if (provider === 'huggingface' && !getStoredHuggingFaceKey()) return false;
       if (provider === 'cloudflare' && !getStoredCloudflareId()) return false;
       if (provider === 'groq' && !getStoredGroqKey()) return false;
+      if (provider === 'aws' && !getStoredAwsAccessKey()) return false;
       return true;
   };
 
@@ -114,6 +116,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                 } else if (visionProvider === 'groq') {
                     console.log("Using Groq Llama 3.2 Vision");
                     analysis = await analyzeImageForBriefGroq(base64String);
+                } else if (visionProvider === 'aws') {
+                    console.log("Using AWS Bedrock Claude 3 Sonnet");
+                    analysis = await analyzeImageBedrock(base64String, mimeType);
                 } else {
                     console.log("Using Gemini Pro Vision");
                     analysis = await analyzeImageForBrief(base64String, mimeType);
@@ -240,6 +245,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                 
                 <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
                     <button type="button" onClick={() => setVisionProvider('gemini')} className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${visionProvider === 'gemini' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Gemini Vision"><Zap className="w-3 h-3"/> Gemini</button>
+                    <button type="button" onClick={() => setVisionProvider('aws')} className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${visionProvider === 'aws' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="AWS Bedrock (Claude 3)"><Cloud className="w-3 h-3"/> AWS</button>
                     <button type="button" onClick={() => setVisionProvider('groq')} className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${visionProvider === 'groq' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Groq Llama 3.2"><Eye className="w-3 h-3"/> Groq</button>
                     <button type="button" onClick={() => setVisionProvider('huggingface')} className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${visionProvider === 'huggingface' ? 'bg-white text-yellow-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Hugging Face"><Smile className="w-3 h-3"/> HF</button>
                     <button type="button" onClick={() => setVisionProvider('cloudflare')} className={`px-2 py-1 rounded text-[10px] font-bold transition-all flex items-center gap-1 ${visionProvider === 'cloudflare' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Cloudflare Workers AI"><Cloud className="w-3 h-3"/> CF</button>
@@ -249,6 +255,51 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                     {isAnalyzingImage ? <Loader2 className="w-3 h-3 animate-spin"/> : <ImageIcon className="w-3 h-3" />}
                     {isAnalyzingImage ? "Scanning..." : "Auto-fill"}
                 </button>
+                
+                {/* Role Model (Moved Inside) */}
+                <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/50 backdrop-blur-sm border border-slate-200 shadow-sm transition-all hover:bg-white/80 ml-2 group/lock">
+                     <input type="file" ref={faceInputRef} accept="image/*" className="hidden" onChange={(e) => handleReferenceUpload(e, 'face')} />
+                     <input type="file" ref={outfitInputRef} accept="image/*" className="hidden" onChange={(e) => handleReferenceUpload(e, 'outfit')} />
+
+                     {/* Face Lock */}
+                     <button 
+                        type="button"
+                        onClick={() => data.references?.face_image_base64 ? setData(prev => ({...prev, references: {...prev.references, face_description: '', face_image_base64: ''}})) : faceInputRef.current?.click()}
+                        disabled={isAnalyzingRef}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${data.references?.face_image_base64 ? 'ring-2 ring-pink-500' : 'bg-slate-100 hover:bg-pink-50 text-slate-400 hover:text-pink-500'}`}
+                        title="Lock Face (Consistent Character)"
+                     >
+                        {data.references?.face_image_base64 ? (
+                            <img src={`data:image/jpeg;base64,${data.references.face_image_base64}`} className="w-full h-full rounded-full object-cover" />
+                        ) : isAnalyzingRef ? <Loader2 className="w-3 h-3 animate-spin"/> : <User className="w-3.5 h-3.5" />}
+                     </button>
+
+                     {/* Outfit Lock */}
+                     <button 
+                        type="button"
+                        onClick={() => data.references?.outfit_image_base64 ? setData(prev => ({...prev, references: {...prev.references, outfit_description: '', outfit_image_base64: ''}})) : outfitInputRef.current?.click()}
+                        disabled={isAnalyzingRef}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${data.references?.outfit_image_base64 ? 'ring-2 ring-indigo-500' : 'bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-500'}`}
+                        title="Lock Outfit (Consistent Style)"
+                     >
+                        {data.references?.outfit_image_base64 ? (
+                            <img src={`data:image/jpeg;base64,${data.references.outfit_image_base64}`} className="w-full h-full rounded-full object-cover" />
+                        ) : isAnalyzingRef ? <Loader2 className="w-3 h-3 animate-spin"/> : <Shirt className="w-3.5 h-3.5" />}
+                     </button>
+
+                    {/* Mini Toast */}
+                    {lockToast && (
+                        <div className="absolute top-[-30px] right-0 bg-slate-800 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-lg animate-in fade-in slide-in-from-bottom-1 whitespace-nowrap z-50">
+                            {lockToast}
+                        </div>
+                    )}
+                    
+                    {/* Tooltip on Hover */}
+                    <div className="absolute top-10 right-0 w-48 bg-slate-800 text-white text-[10px] p-2 rounded-lg shadow-xl opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-50">
+                        <p className="font-bold mb-0.5">Role Model Lock</p>
+                        <p className="opacity-80 leading-tight">Upload a face or outfit to keep characters consistent across generated scenes.</p>
+                    </div>
+                  </div>
              </div>
         </div>
 
@@ -264,47 +315,8 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
         </div>
       </div>
 
-      {/* Role Model (Ultra Simple & Transparent) */}
-      <div className="flex justify-end relative h-0"> 
-          <div className="absolute top-[-85px] right-2 flex items-center gap-2 p-1.5 rounded-full bg-white/50 backdrop-blur-sm border border-slate-200 shadow-sm transition-all hover:bg-white/80">
-             <input type="file" ref={faceInputRef} accept="image/*" className="hidden" onChange={(e) => handleReferenceUpload(e, 'face')} />
-             <input type="file" ref={outfitInputRef} accept="image/*" className="hidden" onChange={(e) => handleReferenceUpload(e, 'outfit')} />
-
-             {/* Face Lock */}
-             <button 
-                type="button"
-                onClick={() => data.references?.face_image_base64 ? setData(prev => ({...prev, references: {...prev.references, face_description: '', face_image_base64: ''}})) : faceInputRef.current?.click()}
-                disabled={isAnalyzingRef}
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${data.references?.face_image_base64 ? 'ring-2 ring-pink-500' : 'bg-slate-100 hover:bg-pink-50 text-slate-400 hover:text-pink-500'}`}
-                title="Lock Face"
-             >
-                {data.references?.face_image_base64 ? (
-                    <img src={`data:image/jpeg;base64,${data.references.face_image_base64}`} className="w-full h-full rounded-full object-cover" />
-                ) : isAnalyzingRef ? <Loader2 className="w-3 h-3 animate-spin"/> : <User className="w-3.5 h-3.5" />}
-             </button>
-
-             {/* Outfit Lock */}
-             <button 
-                type="button"
-                onClick={() => data.references?.outfit_image_base64 ? setData(prev => ({...prev, references: {...prev.references, outfit_description: '', outfit_image_base64: ''}})) : outfitInputRef.current?.click()}
-                disabled={isAnalyzingRef}
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${data.references?.outfit_image_base64 ? 'ring-2 ring-indigo-500' : 'bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-500'}`}
-                title="Lock Outfit"
-             >
-                {data.references?.outfit_image_base64 ? (
-                    <img src={`data:image/jpeg;base64,${data.references.outfit_image_base64}`} className="w-full h-full rounded-full object-cover" />
-                ) : isAnalyzingRef ? <Loader2 className="w-3 h-3 animate-spin"/> : <Shirt className="w-3.5 h-3.5" />}
-             </button>
-
-            {/* Mini Toast */}
-            {lockToast && (
-                <div className="absolute top-[-30px] right-0 bg-slate-800 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-lg animate-in fade-in slide-in-from-bottom-1 whitespace-nowrap">
-                    {lockToast}
-                </div>
-            )}
-          </div>
-      </div>
-
+      {/* Role Model (Removed from here) */}
+      
       {/* Product */}
       <div className="glass-panel p-4 md:p-5 rounded-2xl border-l-4 border-purple-500">
         <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2 text-base"><Tag className="w-5 h-5 text-purple-500"/> Product Specs</h3>
@@ -444,6 +456,10 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                             <option value="gemini-3-pro-preview">Gemini 3 Pro (Smartest)</option>
                             <option value="gemini-3-flash-preview">Gemini 3 Flash (Fast)</option>
                         </optgroup>
+                        <optgroup label="AWS Bedrock">
+                            <option value="meta.llama3-1-70b-instruct-v1:0">Llama 3.1 70B (AWS)</option>
+                            <option value="amazon.nova-pro-v1:0">Amazon Nova Pro (AWS)</option>
+                        </optgroup>
                         <optgroup label="Other (Groq)">
                             <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
                             <option value="qwen-2.5-32b">Qwen 2.5 32B</option>
@@ -465,6 +481,12 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                             <option value="gemini-3-pro-image-preview">Gemini 3 Image (Best Quality)</option>
                             <option value="gemini-2.5-flash-image">Gemini 2.5 Image (Fast)</option>
                             <option value="imagen-3.0-generate-001">Imagen 3 (Photorealistic)</option>
+                        </optgroup>
+                        <optgroup label="AWS Bedrock">
+                            <option value="aws-titan">AWS Titan G1 v2</option>
+                            <option value="aws-sdxl">AWS SDXL 1.0</option>
+                            <option value="aws-sd3">AWS SD3 Large</option>
+                            <option value="aws-ultra">AWS Ultra</option>
                         </optgroup>
                         <optgroup label="Cloudflare (New)">
                              <option value="cf-flux-schnell">Flux 1 Schnell (Cloudflare)</option>

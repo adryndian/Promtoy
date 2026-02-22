@@ -4,6 +4,7 @@ import { InputForm } from './components/InputForm';
 import { OutputDisplay } from './components/OutputDisplay';
 import { FormData, GeneratedAsset, ScriptVariation } from './types';
 import { sanitizeInput, generateStrategy as generateStrategyGemini, generateScenes as generateScenesGemini } from './services/geminiService';
+import { generateStrategyBedrock, generateScenesBedrock } from './services/awsService';
 import { saveGeneration, updateGeneration, fetchHistory, deleteGeneration, SavedGeneration } from './services/cloudflareService';
 import { Zap, Check, Info, History as HistoryIcon, X, ChevronRight, Clock, RefreshCw, Settings2, Network, Trash2, CheckCircle2, Cpu } from 'lucide-react';
 import { SettingsModal } from './components/SettingsModal';
@@ -87,8 +88,17 @@ const App: React.FC = () => {
       
       const sanitizePromise = rawText ? sanitizeInput(rawText) : Promise.resolve(null);
       
-      // Step 1: Generate Strategy (Always Gemini now)
-      const strategyPromise = generateStrategyGemini(formData, rawText);
+      // Step 1: Generate Strategy (Gemini or AWS)
+      let strategyPromise;
+      const selectedModel = formData.constraints.ai_model || 'gemini-3-pro-preview';
+
+      if (selectedModel.includes('llama') || selectedModel.includes('amazon')) {
+          // Use AWS Bedrock
+          strategyPromise = generateStrategyBedrock(formData, rawText, selectedModel);
+      } else {
+          // Default to Gemini
+          strategyPromise = generateStrategyGemini(formData, rawText);
+      }
 
       // Wait for Strategy (Critical Path)
       const strategyData = await strategyPromise;
@@ -115,8 +125,13 @@ const App: React.FC = () => {
         if (i === 1) variationHint = "Create an alternative version. Try a bolder, more controversial hook or a different visual pacing style.";
         if (i === 2) variationHint = "Create a third distinct version. Focus heavily on 'Show, Don't Tell' with a completely different opening scene.";
 
-        // Call the generator (Always Gemini)
-        const scenesPromise = generateScenesGemini(formData, draftResult, variationHint);
+        // Call the generator (Gemini or AWS)
+        let scenesPromise;
+        if (selectedModel.includes('llama') || selectedModel.includes('amazon')) {
+             scenesPromise = generateScenesBedrock(formData, draftResult, variationHint, selectedModel);
+        } else {
+             scenesPromise = generateScenesGemini(formData, draftResult, variationHint);
+        }
             
         const sceneData = await scenesPromise;
         

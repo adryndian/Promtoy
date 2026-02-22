@@ -3,6 +3,8 @@ import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { PollyClient, SynthesizeSpeechCommand } from "@aws-sdk/client-polly";
 
 dotenv.config();
 
@@ -47,6 +49,81 @@ async function executeD1(sql: string, params: any[] = []) {
     throw error;
   }
 }
+
+// AWS Polly Proxy
+app.post("/api/aws/polly", async (req, res) => {
+  const { region, accessKeyId, secretAccessKey, text, voiceId, engine } = req.body;
+
+  if (!region || !accessKeyId || !secretAccessKey || !text || !voiceId) {
+    return res.status(400).json({ error: "Missing AWS credentials or parameters" });
+  }
+
+  try {
+    const client = new PollyClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+
+    const command = new SynthesizeSpeechCommand({
+      Text: text,
+      OutputFormat: "mp3",
+      VoiceId: voiceId,
+      Engine: engine || "neural",
+    });
+
+    const response = await client.send(command);
+    
+    // Convert stream to base64
+    const stream = response.AudioStream as any;
+    const chunks = [];
+    for await (const chunk of stream) {
+        chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    const base64 = buffer.toString("base64");
+    
+    res.json({ audioContent: base64 });
+  } catch (error) {
+    console.error("AWS Polly Error:", error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// AWS Bedrock Proxy
+app.post("/api/aws/bedrock", async (req, res) => {
+  const { region, accessKeyId, secretAccessKey, modelId, body } = req.body;
+
+  if (!region || !accessKeyId || !secretAccessKey || !modelId || !body) {
+    return res.status(400).json({ error: "Missing AWS credentials or parameters" });
+  }
+
+  try {
+    const client = new BedrockRuntimeClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+
+    const command = new InvokeModelCommand({
+      modelId,
+      body: JSON.stringify(body),
+      contentType: "application/json",
+      accept: "application/json",
+    });
+
+    const response = await client.send(command);
+    const responseBody = new TextDecoder().decode(response.body);
+    res.json(JSON.parse(responseBody));
+  } catch (error) {
+    console.error("AWS Bedrock Error:", error);
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
 
 // Initialize Database Table
 async function initDb() {
