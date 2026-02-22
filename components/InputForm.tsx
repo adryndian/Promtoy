@@ -117,7 +117,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                     console.log("Using Groq Llama 3.2 Vision");
                     analysis = await analyzeImageForBriefGroq(base64String);
                 } else if (visionProvider === 'aws') {
-                    console.log("Using AWS Bedrock Claude 3 Sonnet");
+                    console.log("Using AWS Bedrock Claude 3.5 Sonnet");
                     analysis = await analyzeImageBedrock(base64String, mimeType);
                 } else {
                     console.log("Using Gemini Pro Vision");

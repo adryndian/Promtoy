@@ -6,7 +6,7 @@ export const analyzeImageBedrock = async (base64Image: string, mimeType: string 
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
-    const modelId = "anthropic.claude-3-sonnet-20240229-v1:0"; // Claude 3 Sonnet
+    const modelId = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"; // Claude 3 Sonnet
 
     if (!accessKeyId || !secretAccessKey) {
         throw new Error("AWS Credentials missing. Please check Settings.");
