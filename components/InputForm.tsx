@@ -458,7 +458,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                         </optgroup>
                         <optgroup label="AWS Bedrock">
                             <option value="us.meta.llama4-maverick-17b-instruct-v1:0">Llama 4 Maverick (AWS)</option>
-                            <option value="amazon.nova-pro-v1:0">Amazon Nova Pro (AWS)</option>
+                            <option value="us.anthropic.claude-sonnet-4-6">Claude Sonnet 4.6</option>
                         </optgroup>
                         <optgroup label="Other (Groq)">
                             <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
