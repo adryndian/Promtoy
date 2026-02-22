@@ -6,7 +6,7 @@ export const analyzeImageBedrock = async (base64Image: string, mimeType: string 
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
     const region = getStoredAwsRegion().trim();
-    const modelId = "us.anthropic.claude-sonnet-4-6"; // Claude 4 Sonnet
+    const modelId = "us.anthropic.claude-sonnet-4-6"; // Claude 3 Sonnet
 
     if (!accessKeyId || !secretAccessKey) {
         throw new Error("AWS Credentials missing. Please check Settings.");
@@ -274,13 +274,14 @@ ${userPrompt}
             temperature: 0.7,
             top_p: 0.9
         };
-    } else if (modelId.includes("anthropic.claude")) {
+    } else if (modelId.includes("amazon.nova")) {
+         // Nova format (similar to Bedrock Converse API, but InvokeModel uses specific schema)
+         // For Nova, it's best to use Converse API, but our proxy uses InvokeModel.
+         // Nova InvokeModel body:
          body = {
-             anthropic_version: "bedrock-2023-05-31",
-             system: systemPrompt,
-             messages: [{ role: "user", content: [{ type: "text", text: userPrompt }] }],
-             max_tokens: 2048,
-             temperature: 0.7
+             system: [{ text: systemPrompt }],
+             messages: [{ role: "user", content: [{ text: userPrompt }] }],
+             inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 }
          };
     } else {
         // Default to Llama style or error
@@ -310,8 +311,8 @@ ${userPrompt}
 
         if (modelId.includes("meta.llama")) {
             jsonString = data.generation;
-        } else if (modelId.includes("anthropic.claude")) {
-            jsonString = data.content[0].text;
+        } else if (modelId.includes("amazon.nova")) {
+            jsonString = data.output.message.content[0].text;
         }
 
         const clean = jsonString.replace(/```json\s*|\s*```/g, '').trim();
@@ -378,13 +379,11 @@ ${userPrompt}
             temperature: 0.7,
             top_p: 0.9
         };
-    } else if (modelId.includes("anthropic.claude")) {
+    } else if (modelId.includes("amazon.nova")) {
          body = {
-             anthropic_version: "bedrock-2023-05-31",
-             system: systemPrompt,
-             messages: [{ role: "user", content: [{ type: "text", text: userPrompt }] }],
-             max_tokens: 2048,
-             temperature: 0.7
+             system: [{ text: systemPrompt }],
+             messages: [{ role: "user", content: [{ text: userPrompt }] }],
+             inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 }
          };
     }
 
@@ -411,8 +410,8 @@ ${userPrompt}
 
         if (modelId.includes("meta.llama")) {
             jsonString = data.generation;
-        } else if (modelId.includes("anthropic.claude")) {
-            jsonString = data.content[0].text;
+        } else if (modelId.includes("amazon.nova")) {
+            jsonString = data.output.message.content[0].text;
         }
 
         const clean = jsonString.replace(/```json\s*|\s*```/g, '').trim();
@@ -423,6 +422,7 @@ ${userPrompt}
         throw error;
     }
 };
+
 
 export const generateVideoBedrock = async (prompt: string, imageBase64?: string): Promise<string> => {
     // ... (Keep existing error message or implementation)
