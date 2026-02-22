@@ -1,7 +1,7 @@
 name = "promptoy"
 pages_build_output_dir = "dist"
 compatibility_date = "2024-02-21"
-account_id = "2472636ad2b8833398abf45b94a93f6d"
+
 
 [vars]
 # Environment variables for Cloudflare Pages Functions
