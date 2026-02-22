@@ -1,3 +1,214 @@
+import { getStoredAwsAccessKey, getStoredAwsSecretKey, getStoredAwsRegion } from './externalService';
+
+const AWS_PROXY_URL = '/api/aws/bedrock';
+
+export const analyzeImageBedrock = async (base64Image: string, mimeType: string = "image/jpeg"): Promise<any> => {
+    const accessKeyId = getStoredAwsAccessKey().trim();
+    const secretAccessKey = getStoredAwsSecretKey().trim();
+    const region = getStoredAwsRegion().trim();
+    const modelId = "us.anthropic.claude-sonnet-4-6"; // Claude 4 Sonnet
+
+    if (!accessKeyId || !secretAccessKey) {
+        throw new Error("AWS Credentials missing. Please check Settings.");
+    }
+
+    const systemPrompt = `
+    Analyze this image for a marketing brief. Return ONLY a valid JSON object with this structure:
+    {
+        "brand_name": "string",
+        "brand_tone": "string",
+        "product_type": "string",
+        "product_material": "string",
+        "price_tier": "mid",
+        "marketing_angle": "problem-solution",
+        "raw_context": "string"
+    }
+    Do not include markdown formatting like \`\`\`json. Just the raw JSON.
+    `;
+
+    const body = {
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [
+            {
+                role: "user",
+                content: [
+                    {
+                        type: "image",
+                        source: {
+                            type: "base64",
+                            media_type: mimeType,
+                            data: base64Image
+                        }
+                    },
+                    {
+                        type: "text",
+                        text: "Analyze this image and extract the brand details."
+                    }
+                ]
+            }
+        ]
+    };
+
+    try {
+        const response = await fetch(AWS_PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                region,
+                accessKeyId,
+                secretAccessKey,
+                modelId,
+                body
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json() as any;
+            throw new Error(err.error || 'AWS Bedrock Analysis Failed');
+        }
+
+        const data = await response.json() as any;
+        // Claude 3 response format
+        const contentText = data.content[0].text;
+        
+        // Clean JSON
+        const cleanJson = contentText.replace(/```json\s*|\s*```/g, '').trim();
+        return JSON.parse(cleanJson);
+
+    } catch (error) {
+        console.error("AWS Bedrock Analysis Error:", error);
+        throw error;
+    }
+};
+
+// --- IMAGE GENERATION ---
+
+export const generateImageBedrock = async (prompt: string, modelId: string = "amazon.titan-image-generator-v2:0"): Promise<string> => {
+  const accessKeyId = getStoredAwsAccessKey().trim();
+  const secretAccessKey = getStoredAwsSecretKey().trim();
+  const region = getStoredAwsRegion().trim();
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error("AWS Credentials missing. Please check Settings.");
+  }
+
+  let body: any = {};
+
+  // Construct payload based on model
+  if (modelId.startsWith("amazon.titan")) {
+      body = {
+        taskType: "TEXT_IMAGE",
+        textToImageParams: {
+          text: prompt,
+        },
+        imageGenerationConfig: {
+          numberOfImages: 1,
+          height: 1024,
+          width: 1024,
+          cfgScale: 8.0,
+          seed: Math.floor(Math.random() * 2147483647),
+        },
+      };
+  } else if (modelId.includes("stability.stable-diffusion-xl")) {
+      body = {
+        text_prompts: [{ text: prompt }],
+        cfg_scale: 10,
+        steps: 30,
+        seed: Math.floor(Math.random() * 2147483647),
+      };
+  } else if (modelId.includes("stability.sd3-large") || modelId.includes("stability.stable-image-ultra")) {
+      body = {
+        prompt: prompt,
+        mode: "text-to-image",
+        aspect_ratio: "1:1",
+        output_format: "png"
+      };
+  } else {
+      throw new Error(`Unsupported AWS Bedrock Image Model: ${modelId}`);
+  }
+
+  try {
+    const response = await fetch(AWS_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        region,
+        accessKeyId,
+        secretAccessKey,
+        modelId,
+        body
+      })
+    });
+
+    if (!response.ok) {
+        const err = await response.json() as any;
+        throw new Error(err.error || 'AWS Bedrock Request Failed');
+    }
+
+    const data = await response.json() as any;
+    
+    // Handle different response formats
+    if (modelId.startsWith("amazon.titan")) {
+        return `data:image/png;base64,${data.images[0]}`;
+    } else if (modelId.includes("stability.stable-diffusion-xl")) {
+        return `data:image/png;base64,${data.artifacts[0].base64}`;
+    } else if (modelId.includes("stability.sd3-large") || modelId.includes("stability.stable-image-ultra")) {
+        return `data:image/png;base64,${data.images[0]}`;
+    }
+    
+    throw new Error("Unknown response format from AWS Bedrock");
+
+  } catch (error) {
+    console.error("AWS Bedrock Image Gen Error:", error);
+    throw error;
+  }
+};
+
+// --- TEXT TO SPEECH (TITAN/POLLY) ---
+
+export const generateSpeechBedrock = async (text: string, voiceId: string = "Joanna"): Promise<string> => {
+    // ... (This function delegates to Polly, so we update Polly function below)
+    return generateSpeechPolly(text, voiceId);
+};
+
+const generateSpeechPolly = async (text: string, voiceId: string): Promise<string> => {
+    const accessKeyId = getStoredAwsAccessKey().trim();
+    const secretAccessKey = getStoredAwsSecretKey().trim();
+    const region = getStoredAwsRegion().trim();
+
+    // We need a new proxy endpoint for Polly because it uses a different client
+    const POLLY_PROXY_URL = '/api/aws/polly';
+
+    try {
+        const response = await fetch(POLLY_PROXY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                region,
+                accessKeyId,
+                secretAccessKey,
+                text,
+                voiceId,
+                engine: "neural" // Use neural engine for better quality
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json() as any;
+            throw new Error(err.error || 'AWS Polly Request Failed');
+        }
+
+        const data = await response.json() as any;
+        // Expecting base64 audio
+        return `data:audio/mp3;base64,${data.audioContent}`;
+    } catch (error) {
+        console.error("AWS Polly TTS Error:", error);
+        throw error;
+    }
+}
+
 // --- STRATEGY & SCENES (LLM) ---
 
 import { FormData, GeneratedAsset } from "../types";
@@ -64,17 +275,11 @@ ${userPrompt}
             top_p: 0.9
         };
     } else if (modelId.includes("anthropic.claude")) {
-         // Format payload khusus untuk model Claude (Messages API Bedrock)
          body = {
              anthropic_version: "bedrock-2023-05-31",
-             max_tokens: 2048,
              system: systemPrompt,
-             messages: [
-                 { 
-                     role: "user", 
-                     content: [{ type: "text", text: userPrompt }] 
-                 }
-             ],
+             messages: [{ role: "user", content: [{ type: "text", text: userPrompt }] }],
+             max_tokens: 2048,
              temperature: 0.7
          };
     } else {
@@ -103,7 +308,6 @@ ${userPrompt}
         const data = await response.json() as any;
         let jsonString = "";
 
-        // Menyesuaikan cara membaca response berdasarkan model
         if (modelId.includes("meta.llama")) {
             jsonString = data.generation;
         } else if (modelId.includes("anthropic.claude")) {
@@ -175,17 +379,11 @@ ${userPrompt}
             top_p: 0.9
         };
     } else if (modelId.includes("anthropic.claude")) {
-         // Format payload khusus untuk model Claude (Messages API Bedrock)
          body = {
              anthropic_version: "bedrock-2023-05-31",
-             max_tokens: 2048,
              system: systemPrompt,
-             messages: [
-                 { 
-                     role: "user", 
-                     content: [{ type: "text", text: userPrompt }] 
-                 }
-             ],
+             messages: [{ role: "user", content: [{ type: "text", text: userPrompt }] }],
+             max_tokens: 2048,
              temperature: 0.7
          };
     }
@@ -211,7 +409,6 @@ ${userPrompt}
         const data = await response.json() as any;
         let jsonString = "";
 
-        // Menyesuaikan cara membaca response berdasarkan model
         if (modelId.includes("meta.llama")) {
             jsonString = data.generation;
         } else if (modelId.includes("anthropic.claude")) {
@@ -225,4 +422,9 @@ ${userPrompt}
         console.error("Bedrock Scenes Error:", error);
         throw error;
     }
+};
+
+export const generateVideoBedrock = async (prompt: string, imageBase64?: string): Promise<string> => {
+    // ... (Keep existing error message or implementation)
+    throw new Error("AWS Bedrock Video Generation (Nova Reel) requires an S3 bucket configuration which is not yet supported in this simple proxy.");
 };
