@@ -7,14 +7,14 @@ compatibility_date = "2024-02-21"
 # These will be overridden by the dashboard settings in production
 # But useful for local dev if using wrangler
 CF_ACCOUNT_ID = "2472636ad2b8833398abf45b94a93f6d"
-CF_DATABASE_ID = "fa1a1f20-da2b-4178-aec2"
+CF_DATABASE_ID = "26ebaff4-98b3-41d7-86b"
 R2_BUCKET_NAME = "ugc-assets"
 # CF_API_TOKEN is sensitive and should be set in the dashboard or .dev.vars locally
 
 [[d1_databases]]
 binding = "DB"
 database_name = "ugc-db"
-database_id = "fa1a1f20-da2b-4178-aec2"
+database_id = "26ebaff4-98b3-41d7-86b"
 
 [[r2_buckets]]
 binding = "ASSETS_BUCKET"
