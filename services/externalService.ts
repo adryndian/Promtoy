@@ -881,6 +881,13 @@ if (!response.ok) {
     throw new Error(`HF Proxy Error: ${errData.error || response.statusText}`);
 }
 
+        const data = await response.json() as any;
+        return `data:image/jpeg;base64,${data.base64}`;
+    } catch (error) {
+        console.error("HF Image Error:", error);
+        throw error;
+    }
+
 };
 
 
