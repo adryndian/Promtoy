@@ -5,12 +5,6 @@ import { GeneratedAsset, Scene } from '../types';
 import { useAppContext } from '../store/AppContext';
 import { SceneCard } from './SceneCard';
 // Tambahkan Loader2 di baris import lucide-react ini:
-import { 
-  Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, 
-  FileText, FileJson, Printer, Brain, Target, Shield, Users, 
-  Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X, 
-  Loader2, Mic, Volume2, Play, Pause, Aperture, Monitor, Tablet, Smartphone 
-} from 'lucide-react';
 
 
 import { generateSpeech, getWavBlob, analyzeVoiceStyle, generateImagePreview, generateVideo } from '../services/geminiService';
@@ -18,7 +12,12 @@ import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudf
 import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
 import { generateImageBedrock, generateSpeechBedrock } from '../services/awsService';
 import { fetchElevenLabsVoices, generateElevenLabsSpeech, ElevenLabsVoice, ELEVENLABS_MODELS, ElevenLabsSettings } from '../services/elevenLabsService';
-import { Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, FileText, FileJson, Printer, Brain, Target, Shield, Users, Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { 
+  Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, 
+  FileText, FileJson, Printer, Brain, Target, Shield, Users, 
+  Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X,
+  Mic, Volume2, Play, Pause, Aperture, Monitor, Tablet, Smartphone, Loader2, RefreshCw
+} from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
 const GEMINI_VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
