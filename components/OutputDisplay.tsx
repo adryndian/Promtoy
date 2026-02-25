@@ -273,19 +273,18 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
       try {
           let imageUrl = "";
           
-          if (activeImageModel.startsWith('cf-')) {
-let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
+                    if (activeImageModel.startsWith('cf-')) {
+               let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
                
-      if (activeImageModel === 'cf-flux-2-dev') {
-          modelId = "@cf/black-forest-labs/flux-2-dev";
+               if (activeImageModel === 'cf-flux-2-dev') {
+                   modelId = "@cf/black-forest-labs/flux-2-dev";
+               } else if (activeImageModel === 'cf-flux-2-klein') {
+                   modelId = "@cf/black-forest-labs/flux-2-klein-9b";
                }
-    else if (activeImageModel === 'cf-flux-2-klein')    {
-          modelId = "@cf/black-forest-labs/flux-2-klein-9b";
->>>>>>>+origin/main
-           }
 
                imageUrl = await generateImageCloudflare(promptToUse, modelId);
           } 
+
   
   else if (activeImageModel === 'grok-2-image') {
 
