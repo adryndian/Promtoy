@@ -8,8 +8,10 @@ import { SceneCard } from './SceneCard';
 import { 
   Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, 
   FileText, FileJson, Printer, Brain, Target, Shield, Users, 
-  Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X, Loader2 
+  Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X, 
+  Loader2, Mic, Volume2, Play, Pause, Aperture, Monitor, Tablet, Smartphone 
 } from 'lucide-react';
+
 
 import { generateSpeech, getWavBlob, analyzeVoiceStyle, generateImagePreview, generateVideo } from '../services/geminiService';
 import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudflare, generateImageXai } from '../services/externalService';
