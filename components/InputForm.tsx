@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { FormData } from '../types';
+import { useAppContext } from '../store/AppContext';
 import { Sparkles, Type, Tag, Smartphone, FileText, Loader2, Image as ImageIcon, Globe, Settings2, Cpu, Zap, Layers, CheckCircle2, Clock, Palette, Camera, Sun, Paintbrush, Split, Smile, Move, Gauge, Cloud, User, Shirt, Eye, Lock, Square } from 'lucide-react';
 import { analyzeImageForBrief } from '../services/geminiService';
 import { analyzeImageForBriefHuggingFace, analyzeImageForBriefCloudflare, analyzeReferenceImage, analyzeImageForBriefGroq, getStoredHuggingFaceKey, getStoredCloudflareId, getStoredGroqKey, getStoredAwsAccessKey, getStoredXaiKey, analyzeImageForBriefXai, analyzeReferenceImageXai } from '../services/externalService';
@@ -8,10 +8,6 @@ import { analyzeImageBedrock, analyzeReferenceImageBedrock } from '../services/a
 
 interface InputFormProps {
   onSubmit: (data: FormData) => void;
-  isLoading: boolean;
-  initialValues?: FormData | null;
-  activeProvider?: string;
-  openRouterModel?: string;
   onOpenSettings?: () => void;
   onStop?: () => void;
 }
@@ -25,7 +21,10 @@ const defaultData: FormData = {
   references: { face_description: '', outfit_description: '' }
 };
 
-export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initialValues, onOpenSettings, onStop }) => {
+export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenSettings, onStop }) => {
+  // Ambil state dari Context
+  const { loading: isLoading, formDataState: initialValues } = useAppContext();
+
   const [data, setData] = useState<FormData>(defaultData);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [isAnalyzingRef, setIsAnalyzingRef] = useState(false);
@@ -78,7 +77,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
       setTimeout(() => setLockToast(null), 3000);
   };
 
-  // Helper to check keys before action
   const checkProviderReady = (provider: string): boolean => {
       if (provider === 'huggingface' && !getStoredHuggingFaceKey()) return false;
       if (provider === 'cloudflare' && !getStoredCloudflareId()) return false;
@@ -93,7 +91,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
       if (shouldOpen && onOpenSettings) onOpenSettings();
   };
 
-  // Main Image Analysis (Auto-fill Brief)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -114,22 +111,16 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
             try {
                 let analysis;
                 if (visionProvider === 'huggingface') {
-                    console.log("Using Hugging Face Llama 3.2 Vision");
                     analysis = await analyzeImageForBriefHuggingFace(base64String);
                 } else if (visionProvider === 'cloudflare') {
-                    console.log("Using Cloudflare Workers AI Vision");
                     analysis = await analyzeImageForBriefCloudflare(base64String);
                 } else if (visionProvider === 'groq') {
-                    console.log("Using Groq Llama 3.2 Vision");
                     analysis = await analyzeImageForBriefGroq(base64String);
                 } else if (visionProvider === 'aws') {
-                    console.log(`Using AWS Bedrock: ${awsVisionModel}`);
                     analysis = await analyzeImageBedrock(base64String, mimeType, awsVisionModel);
                 } else if (visionProvider === 'xai') {
-                    console.log("Using xAI Grok Vision");
                     analysis = await analyzeImageForBriefXai(base64String);
                 } else {
-                    console.log("Using Gemini Pro Vision");
                     analysis = await analyzeImageForBrief(base64String, mimeType);
                 }
                 
@@ -156,11 +147,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                     }
                 }));
                 
-                console.log(`Form auto-filled using ${visionProvider.toUpperCase()} Vision!`);
             } catch (err) {
                 console.error("Image Analysis Error:", err);
                 const msg = err instanceof Error ? err.message : "Unknown error";
-                
                 if (msg.includes("Credentials missing") || msg.includes("API Key missing") || msg.includes("Key missing")) {
                     promptForKey(visionProvider);
                 } else {
@@ -178,15 +167,11 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
     }
   };
 
-  // Reference Image Upload (Face/Outfit Lock)
   const handleReferenceUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'face' | 'outfit') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Use selected reference provider
     const providerToUse = referenceProvider;
-    
-    // Check keys immediately
     if (providerToUse !== 'gemini' && !checkProviderReady(providerToUse)) {
          promptForKey(providerToUse);
          if (e.target) e.target.value = '';
@@ -200,16 +185,12 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
         
         try {
             let description = "";
-            
             if (providerToUse === 'aws') {
                 description = await analyzeReferenceImageBedrock(base64String, type, awsReferenceModel);
             } else if (providerToUse === 'xai') {
                 description = await analyzeReferenceImageXai(base64String, type);
             } else if (providerToUse === 'gemini') {
-                // Use Gemini for reference analysis
                  const geminiAnalysis = await analyzeImageForBrief(base64String, file.type);
-                 // Gemini returns a full brief, we need to extract relevant info or use raw_context
-                 // Ideally we should have a specific Gemini function for this, but using raw_context is a decent fallback
                  description = geminiAnalysis.raw_context || "A person/outfit matching the image.";
             } else {
                 description = await analyzeReferenceImage(base64String, type, providerToUse as 'huggingface' | 'cloudflare' | 'groq');
@@ -224,7 +205,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading, initi
                         [type === 'face' ? 'face_description' : 'outfit_description']: description
                     }
                 }));
-                // showLockToast(`${type === 'face' ? 'Face' : 'Outfit'} locked!`);
             } else {
                 throw new Error("Could not extract description.");
             }

@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useAppContext } from './store/AppContext';
 import { InputForm } from './components/InputForm';
 import { OutputDisplay } from './components/OutputDisplay';
 import { FormData, GeneratedAsset, ScriptVariation } from './types';
@@ -7,67 +7,40 @@ import { sanitizeInput, generateStrategy as generateStrategyGemini, generateScen
 import { generateStrategyBedrock, generateScenesBedrock } from './services/awsService';
 import { generateStrategyGroq, generateScenesGroq, generateStrategyXai, generateScenesXai } from './services/externalService';
 import { saveGeneration, updateGeneration, fetchHistory, deleteGeneration, SavedGeneration } from './services/cloudflareService';
-import { Zap, Check, Info, History as HistoryIcon, X, ChevronRight, Clock, RefreshCw, Settings2, Network, Trash2, CheckCircle2, Cpu, LogOut, Moon, Sun } from 'lucide-react';
+import { Zap, Check, Info, History as HistoryIcon, X, ChevronRight, Clock, RefreshCw, Settings2, Trash2, CheckCircle2, LogOut, Moon, Sun } from 'lucide-react';
 import { SettingsModal } from './components/SettingsModal';
 import { LoginPage } from './components/LoginPage';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
-  const [result, setResult] = useState<GeneratedAsset | null>(null);
-  const [formDataState, setFormDataState] = useState<FormData | null>(null);
+  // 1. Ambil state global dari Context
+  const { 
+    user, setUser, 
+    darkMode, toggleDarkMode, 
+    notification, showNotification,
+    loading, setLoading, 
+    loadingStage, setLoadingStage,
+    result, setResult,
+    formDataState, setFormDataState,
+    activeProvider, setActiveProvider
+  } = useAppContext();
+
+  // 2. State lokal (Hanya untuk halaman ini)
   const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingStage, setLoadingStage] = useState<'idle' | 'analyzing' | 'drafting' | 'finalizing'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [savedToDb, setSavedToDb] = useState(false);
   
-  // Dark Mode State
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' || 
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
-    return false;
-  });
-
-  // History State
+  // History & Settings State
   const [history, setHistory] = useState<SavedGeneration[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-
-  // Notification State
-  const [notification, setNotification] = useState<string | null>(null);
-
-  // Settings State
   const [showSettings, setShowSettings] = useState(false);
-  const [activeProvider, setActiveProvider] = useState<string>('gemini'); // Default to gemini
   
-  // Abort Controller Ref for stopping generation
+  // Abort Controller Ref
   const isCancelledRef = React.useRef(false);
 
   useEffect(() => {
-    // Check for user session on mount
-    const storedUser = localStorage.getItem('ugc_user');
-    if (storedUser) {
-        setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  useEffect(() => {
-    // Apply dark mode class
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
-
-  useEffect(() => {
-    // Default to Gemini as Groq is removed
     setActiveProvider('gemini');
-  }, [showSettings]); 
+  }, [showSettings, setActiveProvider]); 
 
   const handleLogin = (userData: any) => {
       setUser(userData);
@@ -87,18 +60,13 @@ const App: React.FC = () => {
           isCancelledRef.current = true;
           setLoading(false);
           setLoadingStage('idle');
-          showNotificationMsg("Generation Stopped");
+          showNotification("Generation Stopped");
       }
   };
 
   if (!user) {
       return <LoginPage onLogin={handleLogin} />;
   }
-
-  const showNotificationMsg = (msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
-  };
 
   const handleUpdateGeneration = async (updatedAsset: GeneratedAsset) => {
       setResult(updatedAsset);
@@ -116,18 +84,13 @@ const App: React.FC = () => {
     setFormDataState(formData);
     setCurrentGenerationId(null);
     
-    // Reset cancellation flag
     isCancelledRef.current = false;
-
-    // Default to Gemini
-    const currentProvider = 'gemini';
     setActiveProvider('gemini');
 
     let draftId: string | null = null;
     const variationsCount = formData.constraints.variations_count || 1;
 
     try {
-      // --- IMMEDIATE SAVE: Create a draft record so history is updated instantly ---
       const placeholderResult: GeneratedAsset = {
         concept_title: "Generating Strategy...",
         hook_rationale: "AI Director is analyzing your brief.",
@@ -150,53 +113,39 @@ const App: React.FC = () => {
 
       if (isCancelledRef.current) return;
 
-      // --- PROCESSING ---
       const rawText = formData.scrape.raw_text_optional || "";
-      
       const sanitizePromise = rawText ? sanitizeInput(rawText) : Promise.resolve(null);
       
-      // Step 1: Generate Strategy (Gemini, AWS, or Groq)
       let strategyPromise;
       const selectedModel = formData.constraints.ai_model || 'gemini-3-pro-preview';
 
       if (selectedModel.includes('grok')) {
-          // xAI Grok Models
           strategyPromise = generateStrategyXai(formData, rawText);
       } else if (selectedModel.includes('llama') && !selectedModel.includes('meta.')) {
-          // Groq Models (e.g. llama-3.3-70b-versatile, deepseek-r1-distill-llama-70b)
-          // Note: AWS Llama models start with 'meta.'
           strategyPromise = generateStrategyGroq(formData, rawText);
       } else if (selectedModel.includes('meta.') || selectedModel.includes('amazon') || selectedModel.includes('anthropic')) {
-          // Use AWS Bedrock
           strategyPromise = generateStrategyBedrock(formData, rawText, selectedModel);
       } else {
-          // Default to Gemini
           strategyPromise = generateStrategyGemini(formData, rawText);
       }
 
-      // Wait for Strategy (Critical Path)
       const strategyData = await strategyPromise;
-      
       if (isCancelledRef.current) return;
 
       setLoadingStage('drafting');
 
-      // Update UI with Strategy immediately
       let draftResult: GeneratedAsset = {
           ...strategyData as any,
           variations: []
       };
       setResult(draftResult);
 
-      // Step 2: Generate Scenes (Loop for Variations)
       setLoadingStage('finalizing');
-      
       const generatedVariations: ScriptVariation[] = [];
 
       for (let i = 0; i < variationsCount; i++) {
         if (isCancelledRef.current) break;
 
-        // Create distinct instruction for each variation
         let variationHint = "";
         let variationName = `Variation ${String.fromCharCode(65 + i)}`;
         
@@ -204,7 +153,6 @@ const App: React.FC = () => {
         if (i === 1) variationHint = "Create an alternative version. Try a bolder, more controversial hook or a different visual pacing style.";
         if (i === 2) variationHint = "Create a third distinct version. Focus heavily on 'Show, Don't Tell' with a completely different opening scene.";
 
-        // Call the generator (Gemini, AWS, Groq, or xAI)
         let scenesPromise;
         if (selectedModel.includes('grok')) {
              scenesPromise = generateScenesXai(formData, draftResult, variationHint);
@@ -232,13 +180,11 @@ const App: React.FC = () => {
       
       if (isCancelledRef.current) return;
 
-      // Get sanitization result (non-blocking)
       const sanReport = await sanitizePromise;
 
       const finalResult: GeneratedAsset = {
           ...draftResult,
           variations: generatedVariations,
-          // Backward compatibility: put the first variation in the main scenes bucket
           scenes: generatedVariations[0]?.scenes || [], 
           compliance_check: generatedVariations[0]?.scenes ? "Checked" : "Pending",
           caption: generatedVariations[0]?.caption,
@@ -248,7 +194,6 @@ const App: React.FC = () => {
       
       setResult(finalResult);
 
-      // --- UPDATE DB: Replace draft with final result ---
       if (draftId && user) {
         updateGeneration(draftId, finalResult, formData, user.id).then(() => {
           console.log("Draft updated with final result");
@@ -295,17 +240,16 @@ const App: React.FC = () => {
     setCurrentGenerationId(item.id);
     setShowHistory(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    showNotificationMsg("Brief & Strategy Loaded Successfully");
+    showNotification("Brief & Strategy Loaded Successfully");
   };
 
   const handleDeleteHistoryItem = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Prevent loading the item when clicking delete
+    e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this saved generation?")) {
         try {
             await deleteGeneration(id);
-            // Optimistic update
             setHistory(prev => prev.filter(item => item.id !== id));
-            showNotificationMsg("Item deleted");
+            showNotification("Item deleted");
         } catch (err) {
             console.error("Delete Error:", err);
             alert("Failed to delete item. You may not have permission.");
@@ -354,7 +298,7 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
             <button 
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleDarkMode}
                 className="flex items-center justify-center p-2.5 md:p-2 rounded-xl md:rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all hover:text-brand-600 shadow-sm active:scale-95 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-brand-400"
                 title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
@@ -414,7 +358,7 @@ const App: React.FC = () => {
                     <div className="flex items-center gap-3 mb-6 text-brand-600 dark:text-brand-400">
                        <RefreshCw className="w-6 h-6 animate-spin" />
                        <span className="font-bold text-base tracking-widest uppercase">
-                          Generating Assets
+                         Generating Assets
                        </span>
                     </div>
                     <div className="space-y-5">

@@ -1,7 +1,7 @@
-
 import React, { ReactNode, ErrorInfo, Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { AppProvider } from './store/AppContext';
 
 console.log("System: Booting v2.3...");
 
@@ -14,7 +14,6 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// Error Boundary to catch render-phase errors
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = { hasError: false, error: null };
 
@@ -29,44 +28,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          backgroundColor: '#f8fafc', 
-          color: '#ef4444', 
-          padding: '20px',
-          fontFamily: 'Inter, sans-serif'
-        }}>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', color: '#ef4444', padding: '20px', fontFamily: 'Inter, sans-serif' }}>
           <div style={{ maxWidth: '600px', width: '100%', backgroundColor: 'white', padding: '2rem', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#0f172a' }}>System Failure</h2>
-             <div style={{ 
-               backgroundColor: '#fef2f2', 
-               border: '1px solid #fee2e2', 
-               padding: '1.5rem', 
-               borderRadius: '0.75rem',
-               fontSize: '0.875rem',
-               color: '#b91c1c',
-               whiteSpace: 'pre-wrap',
-               overflow: 'auto'
-             }}>
+             <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fee2e2', padding: '1.5rem', borderRadius: '0.75rem', fontSize: '0.875rem', color: '#b91c1c', whiteSpace: 'pre-wrap', overflow: 'auto' }}>
                {this.state.error?.toString()}
              </div>
-             <button 
-               onClick={() => window.location.reload()}
-               style={{
-                 marginTop: '1.5rem',
-                 padding: '0.75rem 1.5rem',
-                 backgroundColor: '#ea580c',
-                 color: 'white',
-                 fontWeight: 'bold',
-                 borderRadius: '0.5rem',
-                 border: 'none',
-                 cursor: 'pointer',
-                 width: '100%'
-               }}
-             >
+             <button onClick={() => window.location.reload()} style={{ marginTop: '1.5rem', padding: '0.75rem 1.5rem', backgroundColor: '#ea580c', color: 'white', fontWeight: 'bold', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', width: '100%' }}>
                Reboot System
              </button>
           </div>
@@ -85,7 +53,9 @@ if (container) {
     root.render(
       <React.StrictMode>
         <ErrorBoundary>
-          <App />
+          <AppProvider>
+            <App />
+          </AppProvider>
         </ErrorBoundary>
       </React.StrictMode>
     );

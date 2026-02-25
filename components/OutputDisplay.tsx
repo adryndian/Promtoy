@@ -1,26 +1,16 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GeneratedAsset, Scene } from '../types';
+import { useAppContext } from '../store/AppContext';
+import { SceneCard } from './SceneCard';
 import { generateSpeech, getWavBlob, analyzeVoiceStyle, generateImagePreview, generateVideo } from '../services/geminiService';
 import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudflare, generateImageXai } from '../services/externalService';
 import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
 import { generateImageBedrock, generateSpeechBedrock } from '../services/awsService';
 import { fetchElevenLabsVoices, generateElevenLabsSpeech, ElevenLabsVoice, ELEVENLABS_MODELS, ElevenLabsSettings } from '../services/elevenLabsService';
-import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight } from 'lucide-react';
+import { Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, FileText, FileJson, Printer, Brain, Target, Shield, Users, Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
 const GEMINI_VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
-const SPEECH_STYLES = [
-  'Natural',
-  'Excited',
-  'Serious',
-  'Whispering',
-  'Shouting',
-  'Fast-paced',
-  'Slow & Deliberate',
-  'Friendly'
-];
-
 const POLLY_VOICES = ['Joanna', 'Matthew', 'Ivy', 'Justin', 'Joey', 'Salli', 'Kimberly', 'Kendra', 'Raveena', 'Aditi', 'Emma', 'Brian', 'Amy', 'Arthur'];
 const NOVA_VOICES = ['nova-en-US-Female-1', 'nova-en-US-Male-1', 'nova-en-GB-Female-1', 'nova-en-GB-Male-1'];
 
@@ -28,17 +18,16 @@ type AspectRatio = "9:16" | "16:9" | "1:1";
 type TTSProvider = 'gemini' | 'elevenlabs' | 'aws';
 
 interface OutputDisplayProps {
-    data: GeneratedAsset | null;
-    modelUsed?: string;
-    imageModelUsed?: string;
     onUpdate?: (updatedData: GeneratedAsset) => void;
 }
 
-export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, imageModelUsed, onUpdate }) => {
+export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
+  // Ambil state dari Context (Menggantikan props `data` dan `modelUsed` yang dihapus)
+  const { result: data, setResult, formDataState } = useAppContext();
+
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
   
-  // Audio/Image cache
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
   const [previewImages, setPreviewImages] = useState<Record<string, string>>({});
   const [previewVideos, setPreviewVideos] = useState<Record<string, string>>({});
@@ -46,22 +35,16 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
   const [activeAudio, setActiveAudio] = useState<HTMLAudioElement | null>(null);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   
-  // Variation State
   const [activeVariationIndex, setActiveVariationIndex] = useState(0);
-
-  // Strategy Section State
   const [showStrategy, setShowStrategy] = useState(false);
 
-  // TTS State
   const [ttsProvider, setTtsProvider] = useState<TTSProvider>('gemini');
-  const [activeVoice, setActiveVoice] = useState<string>('Kore'); // Default Gemini Voice
+  const [activeVoice, setActiveVoice] = useState<string>('Kore');
   const [speechStyle, setSpeechStyle] = useState<string>('Natural');
   
-  // AWS State
   const [awsSpeed, setAwsSpeed] = useState<string>("1.0");
   const [audioHistory, setAudioHistory] = useState<Record<string, { url: string, model: string, timestamp: number }[]>>({});
 
-  // ElevenLabs State
   const [elevenLabsVoices, setElevenLabsVoices] = useState<ElevenLabsVoice[]>([]);
   const [hasElevenLabsKey, setHasElevenLabsKey] = useState(false);
   const [showElTuning, setShowElTuning] = useState(false);
@@ -73,29 +56,21 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
       use_speaker_boost: true
   });
   
-  // Media Generation State
   const [loadingImageIdx, setLoadingImageIdx] = useState<number | null>(null);
   const [loadingVideoIdx, setLoadingVideoIdx] = useState<number | null>(null);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [videoFps, setVideoFps] = useState<number>(24);
   const [videoMotion, setVideoMotion] = useState<number>(5);
   
-  // Studio Settings (Models)
   const [activeImageModel, setActiveImageModel] = useState<string>('gemini-2.5-flash-image');
   const [activeVideoModel, setActiveVideoModel] = useState<string>('veo-3.1-fast-generate-preview');
 
-  // View Modal State
   const [viewModalContent, setViewModalContent] = useState<{type: 'image' | 'video', url: string} | null>(null);
-  
-  // Settings State
   const [showSettings, setShowSettings] = useState(false);
 
-  // Custom Voice State (Gemini only)
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [customVoiceTone, setCustomVoiceTone] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Hydrate state
   useEffect(() => {
     if (data) {
         const initialAudioUrls: Record<string, string> = {};
@@ -120,7 +95,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
     }
   }, [data]);
 
-  // Initial Logic & ElevenLabs Fetch
   useEffect(() => {
     const key = localStorage.getItem('ELEVENLABS_API_KEY');
     if (key) {
@@ -134,7 +108,10 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
         });
     }
 
-    if (imageModelUsed) setActiveImageModel(imageModelUsed);
+    // Ambil default dari Context jika ada
+    if (formDataState?.constraints?.image_generator_model) {
+        setActiveImageModel(formDataState.constraints.image_generator_model);
+    }
 
     if (data) {
         const dna = data.brand_dna;
@@ -150,7 +127,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
             setActiveVoice(recommendedGemini);
         }
     }
-  }, [data]);
+  }, [data, formDataState]);
 
   const getActiveScenes = (): Scene[] => {
       if (!data) return [];
@@ -190,44 +167,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
     setPlayingIdx(null);
   };
 
-  const handleStyleChange = (style: string) => {
-    setSpeechStyle(style);
-    if (activeAudio) {
-        activeAudio.pause();
-        setActiveAudio(null);
-    }
-    setPlayingIdx(null);
-  }
-
   const handleElSettingChange = (field: keyof ElevenLabsSettings, value: any) => {
       setElSettings(prev => ({...prev, [field]: value}));
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsProcessingVoice(true);
-    try {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            const base64Audio = (reader.result as string).split(',')[1];
-            const analyzedTone = await analyzeVoiceStyle(base64Audio);
-            setCustomVoiceTone(analyzedTone);
-            if (ttsProvider !== 'gemini') {
-                setTtsProvider('gemini'); // Force switch back to Gemini for tone cloning features
-                alert("Switched to Gemini TTS to support voice tone cloning.");
-            } else {
-                alert(`Voice Clone Active: Style adapted to "${analyzedTone}"`);
-            }
-        };
-        reader.readAsDataURL(file);
-    } catch (err) {
-        console.error("Voice analysis failed", err);
-        alert("Could not analyze voice sample.");
-    } finally {
-        setIsProcessingVoice(false);
-    }
   };
 
   const handleTogglePlay = async (text: string, idx: number, forceRegenerate: boolean = false) => {
@@ -258,7 +199,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
              url = reader.result as string;
         } else if (ttsProvider === 'aws') {
              const b64 = await generateSpeechBedrock(text, activeVoice, { speed: awsSpeed });
-             url = b64; // Already base64 data URI
+             url = b64; 
         } else {
              const blobUrl = await generateElevenLabsSpeech(text, activeVoice, elSettings);
              const blob = await fetch(blobUrl).then(r => r.blob());
@@ -270,7 +211,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
         
         setAudioUrls(prev => ({ ...prev, [cacheKey]: url }));
         
-        // Add to history
         setAudioHistory(prev => {
             const currentHistory = prev[cacheKey] || [];
             const newEntry = { url, model: `${ttsProvider}-${activeVoice}`, timestamp: Date.now() };
@@ -315,7 +255,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
       setLoadingImageIdx(idx);
       const cacheKey = `${activeVariationIndex}-${idx}`;
       
-      // Prefer new structured image prompt, fallback to legacy
       const promptToUse = scene.media_prompt_details?.image_prompt || scene.image_prompt || scene.visual_description;
 
       try {
@@ -326,10 +265,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
           } else if (activeImageModel === 'grok-2-image') {
                imageUrl = await generateImageXai(promptToUse);
           } else if (activeImageModel.startsWith('aws-') || activeImageModel.startsWith('amazon.')) {
-               // Map short names to full IDs if needed, or pass through
                let modelId = activeImageModel;
                if (activeImageModel === 'aws-titan') modelId = "amazon.titan-image-generator-v2:0";
-               
                imageUrl = await generateImageBedrock(promptToUse, modelId);
           } else if (activeImageModel === 'together-flux') {
               imageUrl = await generateImageTogether(promptToUse);
@@ -369,18 +306,15 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
      setLoadingVideoIdx(idx);
      const cacheKey = `${activeVariationIndex}-${idx}`;
      
-     // Prefer new structured video prompt, fallback to legacy or visual description
      const promptToUse = scene.media_prompt_details?.video_prompt || scene.video_prompt || scene.visual_description;
 
      try {
          let videoUrl = "";
          if (activeVideoModel === 'hf-cogvideo') {
-             // Fallback to HF video logic if model selected
              videoUrl = await generateVideoHuggingFace(promptToUse); 
          } else if (activeVideoModel === 'dashscope-wanx-video') {
              videoUrl = await generateVideoDashscope(promptToUse);
          } else {
-             // Default Veo (Gemini) - Pass activeVideoModel (e.g. 'veo-3.1-generate-preview' or 'veo-3.1-fast-generate-preview')
              videoUrl = await generateVideo(promptToUse, activeVideoModel, videoFps, videoMotion);
          }
 
@@ -434,7 +368,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
     txt += `HOOK: ${data.hook_rationale}\n`;
     txt += `ANGLE: ${data.analysis_report?.winning_angle_logic}\n\n`;
     
-    // Export Active Variation
     txt += `--- SCRIPT (${getActiveVariationName()}) ---\n\n`;
     const scenes = getActiveScenes();
     scenes.forEach((scene, i) => {
@@ -552,7 +485,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
                             ))}
                         </select>
                     </div>
-                    {/* ... (Keep existing Tuning UI) ... */}
                     <button 
                         onClick={() => setShowElTuning(false)}
                         className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/10 active:scale-95 transition-all"
@@ -617,139 +549,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            {/* Row 1: Voice Control */}
-            <div className="-mx-5 px-5 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-3 min-w-max pb-1">
-                    {/* Voice Control Group */}
-                    <div className="flex items-center gap-3 text-xs text-brand-700 bg-brand-50 px-4 py-2 rounded-full border border-brand-200 whitespace-nowrap dark:bg-brand-900/20 dark:text-brand-300 dark:border-brand-900/30">
-                    <Mic className="w-3.5 h-3.5" />
-                    <div className="flex items-center gap-1 bg-white rounded p-0.5 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-700">
-                        <button onClick={() => handleProviderChange('gemini')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'gemini' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>Gemini</button>
-                        <button onClick={() => handleProviderChange('aws')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'aws' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>AWS (Polly/Nova)</button>
-                        <button onClick={() => handleProviderChange('elevenlabs')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'elevenlabs' ? 'bg-orange-500/80 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>ElevenLabs</button>
-                    </div>
-                    <span className="text-brand-300 dark:text-brand-800">|</span>
-                    <div className="flex items-center gap-2">
-                        <span className="text-brand-800/70 uppercase font-bold tracking-wider dark:text-brand-300/70">Voice:</span>
-                        <select value={activeVoice} onChange={(e) => handleVoiceChange(e.target.value)} className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-brand-600 transition-colors max-w-[100px] truncate dark:text-slate-200 dark:hover:text-brand-400">
-                        {ttsProvider === 'gemini' ? GEMINI_VOICES.map(v => <option key={v} value={v} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-200">{v}</option>) 
-                        : ttsProvider === 'aws' ? [...POLLY_VOICES, ...NOVA_VOICES].map(v => <option key={v} value={v} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-200">{v}</option>)
-                        : elevenLabsVoices.length > 0 ? elevenLabsVoices.map(v => <option key={v.voice_id} value={v.voice_id} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-200">{v.name}</option>)
-                        : <option className="bg-white text-slate-400 dark:bg-slate-800 dark:text-slate-500">Loading/No Key...</option>}
-                        </select>
-                    </div>
-
-                    {/* AWS Controls */}
-                    {ttsProvider === 'aws' && (
-                        <>
-                            <span className="text-brand-300 dark:text-brand-800">|</span>
-                            <div className="flex items-center gap-2">
-                                <span className="text-brand-800/70 uppercase font-bold tracking-wider dark:text-brand-300/70">Speed:</span>
-                                <select 
-                                    value={awsSpeed} 
-                                    onChange={(e) => setAwsSpeed(e.target.value)} 
-                                    className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-brand-600 transition-colors dark:text-slate-200 dark:hover:text-brand-400"
-                                >
-                                    <option value="0.8" className="dark:bg-slate-800">0.8x</option>
-                                    <option value="0.9" className="dark:bg-slate-800">0.9x</option>
-                                    <option value="1.0" className="dark:bg-slate-800">1.0x</option>
-                                    <option value="1.1" className="dark:bg-slate-800">1.1x</option>
-                                    <option value="1.2" className="dark:bg-slate-800">1.2x</option>
-                                    <option value="1.5" className="dark:bg-slate-800">1.5x</option>
-                                </select>
-                            </div>
-                        </>
-                    )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Row 2: Visual Controls */}
-            <div className="-mx-5 px-5 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-3 min-w-max pb-1">
-                    {/* Studio Settings (Media Models) */}
-                    <div className="flex items-center gap-3 text-xs text-purple-700 bg-purple-50 px-4 py-2 rounded-full border border-purple-200 whitespace-nowrap dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-900/30">
-                    <Aperture className="w-3.5 h-3.5" />
-                    {/* Image Model Selector */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-purple-800/70 uppercase font-bold tracking-wider dark:text-purple-300/70">Image:</span>
-                        <select 
-                            value={activeImageModel}
-                            onChange={(e) => setActiveImageModel(e.target.value)}
-                            className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-purple-600 transition-colors max-w-[120px] truncate dark:text-slate-200 dark:hover:text-purple-400"
-                        >
-                            <option value="gemini-3-pro-image-preview" className="dark:bg-slate-800">Gemini 3 Pro</option>
-                            <option value="gemini-2.5-flash-image" className="dark:bg-slate-800">Gemini 2.5</option>
-                            <option value="imagen-3.0-generate-001" className="dark:bg-slate-800">Imagen 3</option>
-                            <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
-                            <option value="cf-flux-schnell" className="dark:bg-slate-800">Cloudflare Flux</option>
-                            <option value="grok-2-image" className="dark:bg-slate-800">Grok 2 Image</option>
-                            <option value="hf-flux-dev" className="dark:bg-slate-800">HuggingFace FLUX</option>
-                            <option value="hf-sdxl" className="dark:bg-slate-800">HuggingFace SDXL</option>
-                            <option value="together-flux" className="dark:bg-slate-800">Together FLUX</option>
-                            <option value="dashscope-wanx" className="dark:bg-slate-800">Dashscope Wanx</option>
-                        </select>
-                    </div>
-                    <span className="text-purple-300 dark:text-purple-800">|</span>
-                    {/* Video Model Selector */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-purple-800/70 uppercase font-bold tracking-wider dark:text-purple-300/70">Video:</span>
-                        <select 
-                            value={activeVideoModel}
-                            onChange={(e) => setActiveVideoModel(e.target.value)}
-                            className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-purple-600 transition-colors max-w-[120px] truncate dark:text-slate-200 dark:hover:text-purple-400"
-                        >
-                            <option value="veo-3.1-fast-generate-preview" className="dark:bg-slate-800">Veo Fast</option>
-                            <option value="veo-3.1-generate-preview" className="dark:bg-slate-800">Veo (Quality)</option>
-                            <option value="hf-cogvideo" className="dark:bg-slate-800">HF CogVideo</option>
-                            <option value="dashscope-wanx-video" className="dark:bg-slate-800">Dashscope Wanx</option>
-                        </select>
-                    </div>
-                    </div>
-
-                    {/* Visual Settings Group */}
-                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-full border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
-                        <div className="flex items-center gap-1 pr-1">
-                            {[{ val: "9:16", icon: Smartphone }, { val: "16:9", icon: Monitor }, { val: "1:1", icon: Tablet }].map(r => (
-                                <button key={r.val} onClick={() => setAspectRatio(r.val as AspectRatio)} className={`p-1.5 rounded-full transition-all ${aspectRatio === r.val ? 'bg-white text-brand-600 shadow-sm border border-slate-200 dark:bg-slate-700 dark:text-brand-400 dark:border-slate-600' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}><r.icon className="w-3.5 h-3.5" /></button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Video Settings Group */}
-                    <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-full border border-slate-200 px-3 dark:bg-slate-800 dark:border-slate-700">
-                        <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">FPS</span>
-                            <select 
-                                value={videoFps} 
-                                onChange={(e) => setVideoFps(parseInt(e.target.value))}
-                                className="bg-transparent text-xs font-bold text-slate-700 border-none p-0 focus:ring-0 cursor-pointer dark:text-slate-300"
-                            >
-                                <option value="24" className="dark:bg-slate-800">24</option>
-                                <option value="30" className="dark:bg-slate-800">30</option>
-                                <option value="60" className="dark:bg-slate-800">60</option>
-                            </select>
-                        </div>
-                        <div className="w-px h-3 bg-slate-300 dark:bg-slate-600"></div>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Motion</span>
-                            <input 
-                                type="number" 
-                                min="1" 
-                                max="10" 
-                                value={videoMotion} 
-                                onChange={(e) => setVideoMotion(parseInt(e.target.value))}
-                                className="w-8 bg-transparent text-xs font-bold text-slate-700 border-none p-0 focus:ring-0 text-center dark:text-slate-300"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-          </div>
         </div>
-
-
       </div>
       
       {/* Strategy & Insights Section */}
@@ -884,277 +684,32 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ data, modelUsed, i
          </div>
       ) : (
         <div className="space-y-4">
-            {scenes.map((scene: Scene, idx: number) => {
-                const cacheKey = `${activeVariationIndex}-${idx}`;
-                const structuredPrompts = scene.media_prompt_details;
-                
-                return (
-                <div key={idx} className="group/card relative bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-500 overflow-hidden dark:bg-slate-900 dark:border-slate-700">
-                    {/* Scene Header / Ribbon */}
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-100 group-hover/card:bg-brand-500 transition-colors dark:bg-slate-800"></div>
-                    
-                    <div className="p-5 md:p-7 pl-8 md:pl-10">
-                        <div className="flex flex-col md:flex-row gap-8">
-                            
-                            {/* LEFT COLUMN: VISUALS & MEDIA */}
-                            <div className="w-full md:w-5/12 space-y-5">
-                                
-                                {/* Header Mobile */}
-                                <div className="flex md:hidden items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-black text-slate-300 uppercase tracking-widest dark:text-slate-600">Scene {idx + 1}</span>
-                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full dark:bg-slate-800 dark:text-slate-400">{scene.seconds}s</span>
-                                    </div>
-                                </div>
-
-                                {/* Media Preview Area */}
-                                <div className={`relative w-full rounded-xl overflow-hidden bg-slate-900 shadow-inner border border-slate-200 group/media ${aspectRatio === "9:16" ? "aspect-[9/16]" : aspectRatio === "16:9" ? "aspect-video" : "aspect-square"} dark:bg-slate-950 dark:border-slate-700`}>
-                                    
-                                    {/* GENERATE BUTTONS OVERLAY (When Empty) */}
-                                    {!previewVideos[cacheKey] && !previewImages[cacheKey] && !loadingImageIdx && !loadingVideoIdx && (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 backdrop-blur-[2px] opacity-100 transition-opacity z-10 p-4 text-center dark:bg-slate-800/50">
-                                            <div className="mb-3 p-3 bg-white rounded-full shadow-sm dark:bg-slate-700">
-                                                <Clapperboard className="w-6 h-6 text-slate-300 dark:text-slate-500" />
-                                            </div>
-                                            <p className="text-xs font-medium text-slate-400 mb-4 dark:text-slate-500">Generate visual preview</p>
-                                            <div className="flex gap-2">
-                                                <button 
-                                                    onClick={() => handleGeneratePreview(scene, idx)}
-                                                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-brand-600 hover:border-brand-200 hover:shadow-sm transition-all active:scale-95 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:hover:text-brand-400"
-                                                >
-                                                    <Image className="w-3.5 h-3.5" /> Image
-                                                </button>
-                                                {(structuredPrompts?.video_prompt || scene.video_prompt) && (
-                                                    <button 
-                                                        onClick={() => handleGenerateVideo(scene, idx)}
-                                                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-sm transition-all active:scale-95 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300 dark:hover:text-indigo-400"
-                                                    >
-                                                        <VideoIcon className="w-3.5 h-3.5" /> Video
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* LOADING STATE */}
-                                    {(loadingImageIdx === idx || loadingVideoIdx === idx) && (
-                                        <div className="absolute inset-0 z-20 bg-white flex flex-col items-center justify-center dark:bg-slate-900">
-                                            <Loader2 className="w-8 h-8 text-brand-500 animate-spin mb-2" />
-                                            <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase animate-pulse">
-                                                {loadingVideoIdx === idx ? 'Generating Video...' : 'Rendering Image...'}
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {/* VIDEO DISPLAY */}
-                                    {previewVideos[cacheKey] && (
-                                        <div className="relative w-full h-full group/video">
-                                            <video src={previewVideos[cacheKey]} controls className="w-full h-full object-cover" />
-                                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/video:opacity-100 transition-opacity">
-                                                <button onClick={() => handleDownload(previewVideos[cacheKey] as string, `scene-${idx+1}-video.mp4`)} className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded backdrop-blur"><Download className="w-3 h-3" /></button>
-                                                <button onClick={() => setViewModalContent({type: 'video', url: previewVideos[cacheKey] as string})} className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded backdrop-blur"><Maximize2 className="w-3 h-3" /></button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* IMAGE DISPLAY */}
-                                    {!previewVideos[cacheKey] && previewImages[cacheKey] && (
-                                        <div className="relative w-full h-full group/image">
-                                            <img src={previewImages[cacheKey]} alt="Scene Preview" className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/image:opacity-100 transition-opacity"></div>
-                                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/image:opacity-100 transition-opacity">
-                                                <button onClick={() => handleDownload(previewImages[cacheKey] as string, `scene-${idx+1}-image.jpg`)} className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded backdrop-blur"><Download className="w-3 h-3" /></button>
-                                                <button onClick={() => setViewModalContent({type: 'image', url: previewImages[cacheKey] as string})} className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded backdrop-blur"><Maximize2 className="w-3 h-3" /></button>
-                                            </div>
-                                            {/* Regenerate Overlay on Hover */}
-                                            <div className="absolute bottom-2 right-2 opacity-0 group-hover/image:opacity-100 transition-opacity flex gap-1">
-                                                <button onClick={() => handleGeneratePreview(scene, idx)} className="px-2 py-1 bg-white/90 hover:bg-white text-slate-800 text-[10px] font-bold rounded shadow-sm backdrop-blur flex items-center gap-1">
-                                                    <RefreshCw className="w-3 h-3" /> Regen
-                                                </button>
-                                                {(structuredPrompts?.video_prompt || scene.video_prompt) && (
-                                                    <button onClick={() => handleGenerateVideo(scene, idx)} className="px-2 py-1 bg-indigo-600/90 hover:bg-indigo-600 text-white text-[10px] font-bold rounded shadow-sm backdrop-blur flex items-center gap-1">
-                                                        <VideoIcon className="w-3 h-3" /> Video
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Visual Description */}
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md dark:bg-indigo-900/20 dark:text-indigo-400">
-                                            <Clapperboard className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide dark:text-slate-300">Visual Direction</span>
-                                    </div>
-                                    <p className="text-sm text-slate-600 leading-relaxed font-medium dark:text-slate-400">
-                                        {scene.visual_description}
-                                    </p>
-                                </div>
-
-                                {/* Technical Prompts (Compact) */}
-                                {structuredPrompts && (
-                                    <div className="space-y-2">
-                                        <details className="group/details">
-                                            <summary className="flex items-center gap-2 cursor-pointer text-[10px] font-bold text-slate-400 uppercase tracking-wider hover:text-brand-600 transition-colors select-none dark:hover:text-brand-400">
-                                                <ChevronRight className="w-3 h-3 group-open/details:rotate-90 transition-transform" />
-                                                Technical Prompts
-                                            </summary>
-                                            <div className="mt-3 space-y-3 pl-2 border-l border-slate-100 dark:border-slate-700">
-                                                <div>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Image Prompt</span>
-                                                        <button onClick={() => copyToClipboard(`img-p-${idx}`, structuredPrompts.image_prompt)} className="text-slate-300 hover:text-brand-500 dark:text-slate-600 dark:hover:text-brand-400"><Copy className="w-3 h-3"/></button>
-                                                    </div>
-                                                    <code className="block text-[10px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100 font-mono leading-relaxed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">{structuredPrompts.image_prompt}</code>
-                                                </div>
-                                                <div>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400">Video Prompt</span>
-                                                        <button onClick={() => copyToClipboard(`vid-p-${idx}`, structuredPrompts.video_prompt)} className="text-slate-300 hover:text-indigo-500 dark:text-slate-600 dark:hover:text-indigo-400"><Copy className="w-3 h-3"/></button>
-                                                    </div>
-                                                    <code className="block text-[10px] text-indigo-600/80 bg-indigo-50/30 p-2 rounded border border-indigo-50 font-mono leading-relaxed dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-900/30">{structuredPrompts.video_prompt}</code>
-                                                </div>
-                                            </div>
-                                        </details>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* RIGHT COLUMN: SCRIPT & AUDIO */}
-                            <div className="w-full md:w-7/12 flex flex-col">
-                                {/* Header Desktop */}
-                                <div className="hidden md:flex items-center justify-between mb-6 border-b border-slate-100 pb-4 dark:border-slate-700">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-sm font-black text-slate-300 uppercase tracking-widest dark:text-slate-600">Scene {idx + 1}</span>
-                                        <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full dark:bg-slate-800 dark:text-slate-400">{scene.seconds}s</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => copyToClipboard(`scene-${idx}`, scene)} className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors dark:hover:bg-brand-900/20 dark:hover:text-brand-400" title="Copy JSON">
-                                            {copiedSection === `scene-${idx}` ? <Check className="w-4 h-4"/> : <FileJson className="w-4 h-4"/>}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Script Body */}
-                                <div className="flex-1 space-y-6">
-                                    
-                                    {/* Spoken Audio */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1.5 bg-rose-50 text-rose-500 rounded-md dark:bg-rose-900/20 dark:text-rose-400">
-                                                    <Mic className="w-3.5 h-3.5" />
-                                                </div>
-                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Voiceover</span>
-                                            </div>
-                                            <button onClick={() => copyToClipboard(`script-${idx}`, scene.audio_script)} className="text-xs text-slate-400 hover:text-brand-600 transition-colors dark:hover:text-brand-400">
-                                                {copiedSection === `script-${idx}` ? "Copied" : "Copy"}
-                                            </button>
-                                        </div>
-                                        <div className="pl-4 border-l-2 border-rose-100 dark:border-rose-900/30">
-                                            <p className="font-serif text-xl md:text-2xl text-slate-800 leading-relaxed dark:text-slate-200">
-                                                "{scene.audio_script}"
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Overlay */}
-                                    {scene.on_screen_text && (
-                                        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 dark:bg-amber-900/20 dark:border-amber-900/30">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="p-1 bg-amber-100 text-amber-600 rounded dark:bg-amber-900/40 dark:text-amber-400">
-                                                    <Monitor className="w-3 h-3" />
-                                                </div>
-                                                <span className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider dark:text-amber-400/70">Text Overlay</span>
-                                            </div>
-                                            <p className="text-amber-900 font-bold text-lg tracking-tight dark:text-amber-200">{scene.on_screen_text}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Audio Controls Footer */}
-                                <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-3 dark:border-slate-700">
-                                    <button 
-                                        onClick={() => handleTogglePlay(scene.audio_script as string, idx)} 
-                                        disabled={loadingIdx === idx}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                                            playingIdx === idx 
-                                            ? 'bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-900/30 dark:hover:bg-rose-900/30' 
-                                            : 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 dark:bg-brand-600 dark:hover:bg-brand-500 dark:shadow-brand-900/20'
-                                        }`}
-                                    >
-                                        {loadingIdx === idx ? (
-                                            <>
-                                            <Loader2 className="w-4 h-4 animate-spin"/> Generating Audio...
-                                            </>
-                                        ) : playingIdx === idx ? (
-                                            <>
-                                            <Pause className="w-4 h-4 fill-current"/> Pause Voiceover
-                                            </>
-                                        ) : (
-                                            <>
-                                            {ttsProvider === 'elevenlabs' ? <Volume2 className="w-4 h-4"/> : <Play className="w-4 h-4 fill-current"/>} 
-                                            {audioUrls[cacheKey] ? 'Play Voiceover' : `Generate Audio (${ttsProvider === 'elevenlabs' ? '11Labs' : ttsProvider === 'aws' ? 'AWS' : 'Gemini'})`}
-                                            </>
-                                        )}
-                                    </button>
-
-                                    {/* Regenerate Button */}
-                                    <button
-                                        onClick={() => handleTogglePlay(scene.audio_script as string, idx, true)}
-                                        disabled={loadingIdx === idx}
-                                        className="p-3 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-brand-600 transition-all border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-brand-400"
-                                        title="Regenerate Audio"
-                                    >
-                                        <RefreshCw className={`w-5 h-5 ${loadingIdx === idx ? 'animate-spin' : ''}`} />
-                                    </button>
-
-                                    {/* History Dropdown */}
-                                    {audioHistory[`${activeVariationIndex}-${idx}`] && audioHistory[`${activeVariationIndex}-${idx}`].length > 0 && (
-                                        <div className="relative group">
-                                            <button className="p-3 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-brand-600 transition-all border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-brand-400">
-                                                <Headphones className="w-5 h-5" />
-                                            </button>
-                                            <div className="absolute bottom-full right-0 mb-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 p-2 hidden group-hover:block z-50 dark:bg-slate-800 dark:border-slate-700">
-                                                <div className="text-xs font-bold text-slate-400 px-2 py-1 uppercase border-b border-slate-50 mb-1 dark:border-slate-700">Audio History</div>
-                                                <div className="max-h-48 overflow-y-auto no-scrollbar">
-                                                    {audioHistory[`${activeVariationIndex}-${idx}`].map((h, hIdx) => (
-                                                        <div key={hIdx} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg cursor-pointer group/item dark:hover:bg-slate-700" onClick={() => {
-                                                            const audio = new Audio(h.url);
-                                                            audio.play();
-                                                        }}>
-                                                            <div className="text-xs overflow-hidden">
-                                                                <div className="font-medium text-slate-700 truncate dark:text-slate-300">{h.model}</div>
-                                                                <div className="text-[10px] text-slate-400">{new Date(h.timestamp).toLocaleTimeString()}</div>
-                                                            </div>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleDownload(h.url, `history-${hIdx}.mp3`); }} className="text-slate-300 hover:text-brand-500 opacity-0 group-hover/item:opacity-100 transition-opacity dark:text-slate-500 dark:hover:text-brand-400">
-                                                                <Download className="w-3 h-3" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {audioUrls[cacheKey] && (
-                                        <button 
-                                            onClick={() => handleDownload(audioUrls[cacheKey] as string, `scene-${idx+1}-audio.mp3`)}
-                                            className="p-3 rounded-xl bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 transition-colors border border-slate-200 active:scale-95 shadow-sm dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                                        >
-                                            <Download className="w-5 h-5" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                );
-            })}
+            {scenes.map((scene: Scene, idx: number) => (
+                <SceneCard 
+                    key={idx}
+                    scene={scene}
+                    idx={idx}
+                    activeVariationIndex={activeVariationIndex}
+                    aspectRatio={aspectRatio}
+                    ttsProvider={ttsProvider}
+                    activeAudio={activeAudio}
+                    playingIdx={playingIdx}
+                    loadingIdx={loadingIdx}
+                    loadingImageIdx={loadingImageIdx}
+                    loadingVideoIdx={loadingVideoIdx}
+                    previewImages={previewImages}
+                    previewVideos={previewVideos}
+                    audioUrls={audioUrls}
+                    audioHistory={audioHistory}
+                    copiedSection={copiedSection}
+                    handleTogglePlay={handleTogglePlay}
+                    handleGeneratePreview={handleGeneratePreview}
+                    handleGenerateVideo={handleGenerateVideo}
+                    handleDownload={handleDownload}
+                    copyToClipboard={copyToClipboard}
+                    setViewModalContent={setViewModalContent}
+                />
+            ))}
         </div>
       )}
     </div>
