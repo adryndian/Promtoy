@@ -273,9 +273,19 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
       try {
           let imageUrl = "";
           
-          if (activeImageModel === 'cf-flux-schnell') {
-               imageUrl = await generateImageCloudflare(promptToUse);
-          } else if (activeImageModel === 'grok-2-image') {
+                    if (activeImageModel.startsWith('cf-')) {
+               let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
+               
+               if (activeImageModel === 'cf-flux-2-dev') {
+                   modelId = "@cf/black-forest-labs/flux-2-dev";
+               } else if (activeImageModel === 'cf-flux-2-klein') {
+                   modelId = "@cf/black-forest-labs/flux-2-klein-9b";
+               }
+
+               imageUrl = await generateImageCloudflare(promptToUse, modelId);
+          } 
+
+          else if (activeImageModel === 'grok-2-image') {
                imageUrl = await generateImageXai(promptToUse);
           } else if (activeImageModel.startsWith('aws-') || activeImageModel.startsWith('amazon.')) {
                let modelId = activeImageModel;
