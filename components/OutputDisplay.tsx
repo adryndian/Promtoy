@@ -660,9 +660,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
 
         </div>
       </div>
-
-        </div>
-      </div>
       
       {/* Strategy & Insights Section */}
       {data.analysis_report && (
