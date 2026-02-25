@@ -273,7 +273,6 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
       try {
           let imageUrl = "";
           
-===
           if (activeImageModel.startsWith('cf-')) {
 let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
                
