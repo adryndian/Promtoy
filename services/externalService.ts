@@ -779,73 +779,63 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
 };
 
 // --- CLOUDFLARE IMAGE GENERATION (Flux Schnell) ---
+// 1. Ganti fungsi Cloudflare Image
 export const generateImageCloudflare = async (prompt: string): Promise<string> => {
     const accountId = getStoredCloudflareId();
     const apiToken = getStoredCloudflareToken();
+    if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing.");
 
-    if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing for Image Gen. Please check Settings.");
-
-    const modelId = "@cf/black-forest-labs/flux-1-schnell";
+    const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`;
 
     try {
-        const targetUrl = `${CLOUDFLARE_BASE_URL}/${accountId}/ai/run/${modelId}`;
-        const proxyUrl = `${CORSPROXY_HOST}${encodeURIComponent(targetUrl)}`;
-
-        const response = await fetchWithTimeout(proxyUrl, {
+        const response = await fetchWithTimeout('/api/proxy', {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiToken}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ prompt: prompt, num_steps: 4 })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                provider: "Cloudflare",
+                url: targetUrl,
+                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
+                payload: { prompt: prompt, num_steps: 4 },
+                isBlob: false
+            })
         });
 
-        if (!response.ok) {
-             const err = await response.json().catch(() => ({})) as any;
-             throw new Error(`CF Image Gen Failed: ${err.errors?.[0]?.message || response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error("Cloudflare Proxy Failed");
         const data = await response.json() as any;
         return `data:image/jpeg;base64,${data.result.image}`;
-    } catch (error: any) {
+    } catch (error) {
         console.error("CF Flux Error:", error);
         throw error;
     }
 };
 
-// --- HUGGING FACE (IMAGE) ---
+// 2. Ganti fungsi Hugging Face Image
 export const generateImageHuggingFace = async (prompt: string, modelId: string = "black-forest-labs/FLUX.1-dev"): Promise<string> => {
     const apiKey = getStoredHuggingFaceKey();
-    if (!apiKey) throw new Error("Hugging Face API Token is missing. Please add it in Settings.");
+    if (!apiKey) throw new Error("Hugging Face API Token missing.");
 
     try {
-        const response = await fetchWithTimeout(`${HUGGINGFACE_API_URL}${modelId}`, {
+        const response = await fetchWithTimeout('/api/proxy', {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-                "x-use-cache": "false"
-            },
-            body: JSON.stringify({ inputs: prompt }) 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                provider: "HuggingFace",
+                url: `https://api-inference.huggingface.co/models/${modelId}`,
+                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                payload: { inputs: prompt },
+                isBlob: true // HF mengembalikan file mentah
+            })
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Hugging Face API Failed: ${response.status} - ${err}`);
-        }
-
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (error: any) {
-        console.error("HF Image Gen Error:", error);
+        if (!response.ok) throw new Error("HF Proxy Failed");
+        const data = await response.json() as any;
+        return `data:image/jpeg;base64,${data.base64}`;
+    } catch (error) {
+        console.error("HF Image Error:", error);
         throw error;
     }
 };
+
 
 // --- HUGGING FACE (VIDEO) ---
 export const generateVideoHuggingFace = async (prompt: string, modelId: string = "THUDM/CogVideoX-5b"): Promise<string> => {
