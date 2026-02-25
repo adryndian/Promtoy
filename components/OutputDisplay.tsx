@@ -12,12 +12,7 @@ import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudf
 import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
 import { generateImageBedrock, generateSpeechBedrock } from '../services/awsService';
 import { fetchElevenLabsVoices, generateElevenLabsSpeech, ElevenLabsVoice, ELEVENLABS_MODELS, ElevenLabsSettings } from '../services/elevenLabsService';
-import { 
-  Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, 
-  FileText, FileJson, Printer, Brain, Target, Shield, Users, 
-  Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X,
-  Mic, Volume2, Play, Pause, Aperture, Monitor, Tablet, Smartphone, Loader2, RefreshCw
-} from 'lucide-react';
+import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
 const GEMINI_VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
