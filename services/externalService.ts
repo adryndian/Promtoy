@@ -874,13 +874,13 @@ export const generateImageHuggingFace = async (prompt: string, modelId: string =
             })
         });
 
-        if (!response.ok) throw new Error("HF Proxy Failed");
-        const data = await response.json() as any;
-        return `data:image/jpeg;base64,${data.base64}`;
-    } catch (error) {
-        console.error("HF Image Error:", error);
-        throw error;
-    }
+
+// GANTI MENJADI:
+if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(`HF Proxy Error: ${errData.error || response.statusText}`);
+}
+
 };
 
 
