@@ -129,31 +129,3 @@ export const uploadAsset = async (file: File): Promise<string | null> => {
         return null;
     }
 };
-
-export const uploadBase64Asset = async (base64DataUri: string, contentType: string, filename: string): Promise<string | null> => {
-    try {
-        // Pisahkan header "data:image/jpeg;base64," dari konten aslinya
-        const cleanBase64 = base64DataUri.includes(',') ? base64DataUri.split(',')[1] : base64DataUri;
-        
-        const payload = {
-            filename,
-            contentBase64: cleanBase64,
-            contentType
-        };
-
-        const response = await fetchWithTimeout('/api/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) throw new Error('R2 Upload failed');
-        
-        const data = await response.json() as { success: boolean, url: string };
-        return data.url; // Akan mengembalikan URL seperti "/api/assets/123-img.jpg"
-    } catch (e) {
-        console.error("R2 Upload error:", e);
-        return null;
-    }
-};
-
