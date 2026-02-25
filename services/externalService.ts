@@ -856,7 +856,7 @@ export const generateImageTogether = async (prompt: string, model: string = "bla
 
 
 
-// 2. Ganti fungsi Hugging Face Image
+// 3. Ganti fungsi Hugging Face Image
 export const generateImageHuggingFace = async (prompt: string, modelId: string = "black-forest-labs/FLUX.1-dev"): Promise<string> => {
     const apiKey = getStoredHuggingFaceKey();
     if (!apiKey) throw new Error("Hugging Face API Token missing.");
@@ -867,7 +867,7 @@ export const generateImageHuggingFace = async (prompt: string, modelId: string =
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 provider: "HuggingFace",
-                url: `https://api-inference.huggingface.co/models/${modelId}`,
+                url: `https://router.huggingface.co/models/${modelId}`,
                 headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
                 payload: { inputs: prompt },
                 isBlob: true // HF mengembalikan file mentah
