@@ -2,16 +2,13 @@ name = "promtoy"
 pages_build_output_dir = "dist"
 compatibility_date = "2024-02-21"
 
-[vars]
-
-CF_ACCOUNT_ID = "2472636ad2b8833398abf45b94a93f6d"
-# CF_API_TOKEN is sensitive and should be set in the dashboard or .dev.vars locally
-
 [[d1_databases]]
-binding = "DB"
+binding = "DB" # Ini harus sama dengan env.DB di fungsi typescript
 database_name = "promtoy"
 database_id = "26ebaff4-98b3-41d7-86b9-6887873d261b"
+preview_database_id = "DB" # Diperlukan untuk local development
 
 [[r2_buckets]]
-binding = "ASSETS_BUCKET"
+binding = "ASSETS_BUCKET" # Sama dengan env.ASSETS_BUCKET
 bucket_name = "ugc-assets"
+preview_bucket_name = "ugc-assets-preview" # Diperlukan untuk local development

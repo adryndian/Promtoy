@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev:vite": "vite",
+    "dev": "wrangler pages dev --compatibility-date=2024-02-21 --proxy 3000 -- npm run dev:vite",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler pages dev dist",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
