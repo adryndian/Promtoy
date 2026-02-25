@@ -1,3 +1,5 @@
+import { uploadBase64Asset } from '../services/cloudflareService';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GeneratedAsset, Scene } from '../types';
 import { useAppContext } from '../store/AppContext';
@@ -209,23 +211,31 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
              url = reader.result as string;
         }
         
-        setAudioUrls(prev => ({ ...prev, [cacheKey]: url }));
+                // 🔥 CEGAT DI SINI: Upload Audio ke R2
+        const r2Url = await uploadBase64Asset(url, 'audio/mp3', `voice-${activeVoice}-${Date.now()}.mp3`);
+        const finalUrl = r2Url || url;
+
+        setAudioUrls(prev => ({ ...prev, [cacheKey]: finalUrl }));
         
         setAudioHistory(prev => {
             const currentHistory = prev[cacheKey] || [];
-            const newEntry = { url, model: `${ttsProvider}-${activeVoice}`, timestamp: Date.now() };
+            const newEntry = { url: finalUrl, model: `${ttsProvider}-${activeVoice}`, timestamp: Date.now() };
             return { ...prev, [cacheKey]: [newEntry, ...currentHistory].slice(0, 5) };
         });
 
-        if (data && onUpdate) {
+                if (data && onUpdate) {
             const updatedData = JSON.parse(JSON.stringify(data)) as GeneratedAsset;
             if (updatedData.variations && updatedData.variations[activeVariationIndex]) {
-                 updatedData.variations[activeVariationIndex].scenes[idx].generated_audio = url;
+                 updatedData.variations[activeVariationIndex].scenes[idx].generated_audio = finalUrl;
             } else if (updatedData.scenes) {
-                 updatedData.scenes[idx].generated_audio = url;
+                 updatedData.scenes[idx].generated_audio = finalUrl;
             }
             onUpdate(updatedData);
         }
+        
+        // 🔥 TAMBAHKAN 1 BARIS INI SEBELUM KURUNG KURAWAL TUTUP:
+        url = finalUrl;
+
       }
       
       const audio = new Audio(url);
@@ -279,17 +289,24 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
               imageUrl = await generateImagePreview(promptToUse, aspectRatio, activeImageModel);
           }
 
-          if (imageUrl) {
-              setPreviewImages(prev => ({ ...prev, [cacheKey]: imageUrl }));
+                   if (imageUrl) {
+              // 🔥 CEGAT DI SINI: Upload gambar ke R2 sebelum disimpan ke State/D1
+              const ext = activeImageModel.includes('flux') ? 'png' : 'jpg';
+              const r2Url = await uploadBase64Asset(imageUrl, `image/${ext}`, `scene-${idx}-${Date.now()}.${ext}`);
+              const finalUrl = r2Url || imageUrl; // Jika R2 gagal, tetap gunakan base64 sebagai fallback
+
+              setPreviewImages(prev => ({ ...prev, [cacheKey]: finalUrl }));
               if (data && onUpdate) {
                 const updatedData = JSON.parse(JSON.stringify(data)) as GeneratedAsset;
                 if (updatedData.variations && updatedData.variations[activeVariationIndex]) {
-                     updatedData.variations[activeVariationIndex].scenes[idx].generated_image = imageUrl;
+                     updatedData.variations[activeVariationIndex].scenes[idx].generated_image = finalUrl;
                 } else if (updatedData.scenes) {
-                     updatedData.scenes[idx].generated_image = imageUrl;
+                     updatedData.scenes[idx].generated_image = finalUrl;
                 }
                 onUpdate(updatedData);
               }
+    
+
           } else {
               alert("Failed to generate preview image.");
           }
