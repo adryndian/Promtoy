@@ -273,7 +273,19 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
       try {
           let imageUrl = "";
           
-          if (activeImageModel === 'cf-flux-schnell') {
+      if (activeImageModel.startsWith('cf-')) {
+let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
+               
+      if (activeImageModel === 'cf-flux-2-dev') {
+          modelId = "@cf/black-forest-labs/flux-2-dev";
+               }
+    else if (activeImageModel === 'cf-flux-2-klein')    {
+          modelId = "@cf/black-forest-labs/flux-2-klein-9b";
+               }
+
+               imageUrl = await generateImageCloudflare(promptToUse, modelId);
+          } 
+
                imageUrl = await generateImageCloudflare(promptToUse);
           } else if (activeImageModel === 'grok-2-image') {
                imageUrl = await generateImageXai(promptToUse);
@@ -629,15 +641,16 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                                 <option value="gemini-3-pro-image-preview" className="dark:bg-slate-800">Gemini 3 Pro</option>
                                 <option value="gemini-2.5-flash-image" className="dark:bg-slate-800">Gemini 2.5</option>
                             </optgroup>
-                            <optgroup label="External AI">
-                                <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
-                                <option value="cf-flux-schnell" className="dark:bg-slate-800">Cloudflare Flux</option>
-                                <option value="grok-2-image" className="dark:bg-slate-800">Grok 2 Image</option>
-                                <option value="together-flux" className="dark:bg-slate-800">Together FLUX</option>
-                                <option value="hf-flux-dev" className="dark:bg-slate-800">HF FLUX Dev</option>
-                                <option value="hf-sdxl" className="dark:bg-slate-800">HF SDXL</option>
-                                <option value="dashscope-wanx" className="dark:bg-slate-800">Wanx (Alibaba)</option>
-                            </optgroup>
+       //dropdown image model 
+    <optgroup label="External AI">
+    <option value="cf-flux-2-dev" className="dark:bg-slate-800">CF Flux 2 (Dev)</option>
+    <option value="cf-flux-2-klein" className="dark:bg-slate-800">CF Flux 2 (Klein 9B)</option>
+    <option value="cf-flux-schnell" className="dark:bg-slate-800">CF Flux 1 (Schnell)</option>
+    <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
+    <option value="together-flux" className="dark:bg-slate-800">Together FLUX</option>
+    <option value="hf-flux-dev" className="dark:bg-slate-800">HF FLUX Dev</option>
+</optgroup>
+
                         </select>
 
                     </div>
