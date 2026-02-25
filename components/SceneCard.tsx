@@ -1,6 +1,7 @@
 import React from 'react';
 import { Scene } from '../types';
-import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Maximize2, Video as VideoIcon, Volume2, Headphones, RefreshCw, ChevronRight } from 'lucide-react';
+import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Maximize2, Video as VideoIcon, Volume2, Headphones, RefreshCw, ChevronRight, Monitor } from 'lucide-react';
+
 
 interface SceneCardProps {
     scene: Scene;
