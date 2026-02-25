@@ -620,21 +620,31 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                     <Aperture className="w-3.5 h-3.5" />
                     <div className="flex items-center gap-2">
                         <span className="text-purple-800/70 uppercase font-bold tracking-wider dark:text-purple-300/70">Image:</span>
-                        <select 
+                                                <select 
                             value={activeImageModel}
                             onChange={(e) => setActiveImageModel(e.target.value)}
                             className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-purple-600 transition-colors max-w-[120px] truncate dark:text-slate-200 dark:hover:text-purple-400"
                         >
-                            <option value="gemini-3-pro-image-preview" className="dark:bg-slate-800">Gemini 3 Pro</option>
-                            <option value="gemini-2.5-flash-image" className="dark:bg-slate-800">Gemini 2.5</option>
-                            <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
-                            <option value="cf-flux-schnell" className="dark:bg-slate-800">Cloudflare Flux</option>
+                            <optgroup label="Google">
+                                <option value="gemini-3-pro-image-preview" className="dark:bg-slate-800">Gemini 3 Pro</option>
+                                <option value="gemini-2.5-flash-image" className="dark:bg-slate-800">Gemini 2.5</option>
+                            </optgroup>
+                            <optgroup label="External AI">
+                                <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
+                                <option value="cf-flux-schnell" className="dark:bg-slate-800">Cloudflare Flux</option>
+                                <option value="grok-2-image" className="dark:bg-slate-800">Grok 2 Image</option>
+                                <option value="together-flux" className="dark:bg-slate-800">Together FLUX</option>
+                                <option value="hf-flux-dev" className="dark:bg-slate-800">HF FLUX Dev</option>
+                                <option value="hf-sdxl" className="dark:bg-slate-800">HF SDXL</option>
+                                <option value="dashscope-wanx" className="dark:bg-slate-800">Wanx (Alibaba)</option>
+                            </optgroup>
                         </select>
+
                     </div>
                     <span className="text-purple-300 dark:text-purple-800">|</span>
                     <div className="flex items-center gap-2">
                         <span className="text-purple-800/70 uppercase font-bold tracking-wider dark:text-purple-300/70">Video:</span>
-                        <select 
+                                                <select 
                             value={activeVideoModel}
                             onChange={(e) => setActiveVideoModel(e.target.value)}
                             className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-purple-600 transition-colors max-w-[120px] truncate dark:text-slate-200 dark:hover:text-purple-400"
@@ -642,7 +652,9 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                             <option value="veo-3.1-fast-generate-preview" className="dark:bg-slate-800">Veo Fast</option>
                             <option value="veo-3.1-generate-preview" className="dark:bg-slate-800">Veo Quality</option>
                             <option value="hf-cogvideo" className="dark:bg-slate-800">HF CogVideo</option>
+                            <option value="dashscope-wanx-video" className="dark:bg-slate-800">Wanx Video</option>
                         </select>
+
                     </div>
                     </div>
 
