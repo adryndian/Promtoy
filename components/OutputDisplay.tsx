@@ -4,6 +4,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { GeneratedAsset, Scene } from '../types';
 import { useAppContext } from '../store/AppContext';
 import { SceneCard } from './SceneCard';
+// Tambahkan Loader2 di baris import lucide-react ini:
+import { 
+  Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, 
+  FileText, FileJson, Printer, Brain, Target, Shield, Users, 
+  Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X, Loader2 
+} from 'lucide-react';
+
 import { generateSpeech, getWavBlob, analyzeVoiceStyle, generateImagePreview, generateVideo } from '../services/geminiService';
 import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudflare, generateImageXai } from '../services/externalService';
 import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
