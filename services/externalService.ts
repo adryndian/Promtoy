@@ -864,15 +864,12 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
     }
 };
 
-// --- CLOUDFLARE IMAGE GENERATION (Flux Schnell) ---
-// 1. Ganti fungsi Cloudflare Image
 // --- CLOUDFLARE IMAGE GENERATION ---
 export const generateImageCloudflare = async (prompt: string, modelId: string = "@cf/black-forest-labs/flux-1-schnell"): Promise<string> => {
     const accountId = getStoredCloudflareId();
     const apiToken = getStoredCloudflareToken();
     if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing.");
 
-    // URL sekarang menggunakan modelId agar dinamis
     const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
 
     try {
@@ -883,8 +880,8 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
                 provider: "Cloudflare",
                 url: targetUrl,
                 headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
-                payload: { prompt: prompt, num_steps: 4 },
-                isBlob: false
+                payload: { prompt: prompt }, // 🔥 FIX 1: Hapus num_steps
+                isBlob: true // 🔥 FIX 2: Ubah jadi TRUE karena CF mengembalikan file mentah
             })
         });
 
@@ -894,21 +891,14 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
         }
         
         const data = await response.json() as any;
-        return `data:image/jpeg;base64,${data.result.image}`;
+        return `data:image/jpeg;base64,${data.base64}`; // 🔥 FIX 3: Ambil dari base64
     } catch (error) {
         console.error("CF Flux Error:", error);
         throw error;
     }
 };
 
-
-//togeteher ai
-
-
-
-
-
-// 3. Ganti fungsi Hugging Face Image
+// --- HUGGING FACE IMAGE GENERATION ---
 export const generateImageHuggingFace = async (prompt: string, modelId: string = "black-forest-labs/FLUX.1-dev"): Promise<string> => {
     const apiKey = getStoredHuggingFaceKey();
     if (!apiKey) throw new Error("Hugging Face API Token missing.");
@@ -922,16 +912,14 @@ export const generateImageHuggingFace = async (prompt: string, modelId: string =
                 url: `https://router.huggingface.co/models/${modelId}`,
                 headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
                 payload: { inputs: prompt },
-                isBlob: true // HF mengembalikan file mentah
+                isBlob: true 
             })
         });
 
-
-// GANTI MENJADI:
-if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(`HF Proxy Error: ${errData.error || response.statusText}`);
-}
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(`HF Proxy Error: ${errData.error || response.statusText}`);
+        }
 
         const data = await response.json() as any;
         return `data:image/jpeg;base64,${data.base64}`;
@@ -939,8 +927,8 @@ if (!response.ok) {
         console.error("HF Image Error:", error);
         throw error;
     }
-
 };
+
 
 
 // --- HUGGING FACE (VIDEO) ---
