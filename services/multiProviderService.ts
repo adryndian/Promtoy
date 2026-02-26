@@ -2,40 +2,50 @@ import { GeneratedAsset } from '../types';
 
 // --- TOGETHER AI ---
 
+// Ganti fungsi Together AI
 export const generateImageTogether = async (prompt: string, model: string = "black-forest-labs/FLUX.1-schnell"): Promise<string> => {
     const apiKey = localStorage.getItem('TOGETHER_API_KEY');
-    if (!apiKey) throw new Error("Together AI API Key missing. Please check Settings.");
+    if (!apiKey) throw new Error("Together AI API Key missing. Please set it in Settings.");
 
     try {
-        const response = await fetch("https://api.together.xyz/v1/images/generations", {
+        // 🔥 Pastikan fetch mengarah ke '/api/proxy' 🔥
+        const response = await fetch('/api/proxy', {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: model,
-                prompt: prompt,
-                width: 1024,
-                height: 1024,
-                steps: 4,
-                n: 1,
-                response_format: "b64_json"
+                provider: "TogetherAI",
+                url: "https://api.together.xyz/v1/images/generations",
+                headers: { 
+                    "Authorization": `Bearer ${apiKey}`, 
+                    "Content-Type": "application/json" 
+                },
+                payload: {
+                    model: model,
+                    prompt: prompt,
+                    width: 1024,
+                    height: 1024,
+                    steps: 4,
+                    n: 1,
+                    response_format: "b64_json"
+                },
+                isBlob: false // Together mengembalikan JSON, bukan Blob
             })
         });
 
         if (!response.ok) {
-            const err = await response.json() as any;
-            throw new Error(err.error?.message || "Together AI Image Gen Failed");
+            const errData = await response.json() as any;
+            throw new Error(errData.error || "Together AI Proxy Failed");
         }
-
+        
         const data = await response.json() as any;
+        // Together AI mengembalikan base64 murni di dalam properti b64_json
         return `data:image/png;base64,${data.data[0].b64_json}`;
     } catch (error) {
         console.error("Together AI Error:", error);
         throw error;
     }
 };
+
 
 // --- DASHSCOPE (QWEN/WANX) ---
 

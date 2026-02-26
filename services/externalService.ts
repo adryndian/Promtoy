@@ -162,24 +162,31 @@ export const generateStrategyXai = async (formData: FormData, contextText: strin
     const outputLanguage = formData.constraints.language === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
     const model = formData.constraints.ai_model || 'grok-3';
 
-    const systemPrompt = `
-    You are a World-Class Direct Response Copywriter.
-    OUTPUT JSON FORMAT REQUIRED:
+        const systemPrompt = `
+    You are an Elite TikTok/Reels Creative Director & Direct-Response Copywriter.
+    Your goal is to engineer viral, high-converting UGC (User Generated Content) concepts.
+    
+    RULES FOR STRATEGY:
+    1. AVOID CLICHES: Never use generic openings like "Are you tired of...". Use Pattern Interrupts (Visual hooks, bold statements, contrarian opinions, or ASMR/sensory triggers).
+    2. PSYCHOLOGY: Base the angle on deep psychological triggers (Status, FOMO, Laziness, Insecurity, or Desire for Aesthetic).
+    3. GEN-Z/MILLENNIAL TONE: Keep the tone authentic, conversational, and native to short-form platforms.
+    
+    OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
-      "concept_title": "string",
-      "hook_rationale": "string",
+      "concept_title": "string (Catchy, internal agency name for this concept)",
+      "hook_rationale": "string (Why will this stop a user from scrolling within the first 3 seconds?)",
       "analysis_report": {
-        "audience_persona": "string",
-        "core_pain_points": ["string"],
+        "audience_persona": "string (Ultra-specific target, e.g., 'Burnt-out corporate girlies in their 20s')",
+        "core_pain_points": ["string", "string"],
         "emotional_triggers": ["string"],
-        "competitor_gap": "string",
-        "winning_angle_logic": "string"
+        "competitor_gap": "string (What are competitors ignoring that we will highlight?)",
+        "winning_angle_logic": "string (The psychological framework used, e.g., PAS, Us-vs-Them, or Secret Hack)"
       },
       "brand_dna": {
-        "voice_traits": ["string"],
-        "cta_style": "string",
+        "voice_traits": ["string", "string", "string"],
+        "cta_style": "string (How to ask for the sale naturally)",
         "audience_guess": "string",
-        "genz_style_rules": ["string"],
+        "genz_style_rules": ["string (e.g., 'Don't sound like a TV commercial')"],
         "taboo_words": ["string"]
       },
       "product_truth_sheet": {
@@ -192,14 +199,26 @@ export const generateStrategyXai = async (formData: FormData, contextText: strin
     `;
 
     const userPrompt = `
-    Brand: ${formData.brand.name}
-    Tone: ${formData.brand.tone_hint_optional}
-    Product: ${formData.product.type}
-    Objective: ${formData.product.objective}
-    Context: ${contextText}
-    Language: ${outputLanguage}
-    Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    BRAND INFO:
+    - Name: ${formData.brand.name}
+    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+    
+    PRODUCT INFO:
+    - Type/Item: ${formData.product.type}
+    - Key Feature: ${formData.product.material}
+    - Marketing Objective: ${formData.product.objective}
+    - Requested Angle: ${formData.product.main_angle_optional}
+    
+    CONTEXT / SCRAPED DATA:
+    ${contextText}
+    
+    TARGET SETTINGS:
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
+    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    
+    Task: Analyze the inputs and generate the underlying viral strategy json.
     `;
+
 
     const result = await fetchXai({
         model: model,
@@ -219,42 +238,53 @@ export const generateScenesXai = async (formData: FormData, strategy: Partial<Ge
     const targetSceneCount = formData.constraints.scene_count || 5;
     const model = formData.constraints.ai_model || 'grok-3';
 
-    const faceContext = formData.references?.face_description 
-        ? `[MANDATORY CHARACTER LOCK]: Main character MUST look like this: ${formData.references.face_description}.` 
+        const faceContext = formData.references?.face_description 
+        ? `[MANDATORY CHARACTER LOCK]: Main character MUST look exactly like this: ${formData.references.face_description}. Include this description in EVERY media prompt.` 
         : "";
     const outfitContext = formData.references?.outfit_description 
-        ? `[MANDATORY OUTFIT LOCK]: Character MUST wear: ${formData.references.outfit_description}.` 
+        ? `[MANDATORY OUTFIT LOCK]: Character MUST wear: ${formData.references.outfit_description}. Include this in EVERY media prompt.` 
         : "";
 
     const systemPrompt = `
-    You are an Elite UGC Scriptwriter. Write a production-ready script.
-    
+    You are an Elite UGC Scriptwriter & Expert AI Cinematographer.
+    Your job is to translate a viral strategy into a frame-by-frame production script.
+
+    STRICT PACING RULES:
+    - TikTok/Reels move FAST. Keep scenes between 2 to 6 seconds max.
+    - SCENE 1 MUST be a 3-second visual and auditory Pattern Interrupt (The Hook).
+    - Show, Don't Tell: If the voiceover says "it's waterproof", the visual MUST be splashing water on the product.
+
+    PROMPT ENGINEERING RULES (CRITICAL FOR AI IMAGE/VIDEO GENERATION):
+    - "image_prompt": Must use photography terms. Start with "Raw smartphone photo, UGC style..." or "Cinematic 35mm lens...". Describe lighting, subject, action, and background explicitly. No abstract concepts.
+    - "video_prompt": Describe motion. e.g., "Handheld camera slowly zooming in on [subject] doing [action], natural window lighting, 4k resolution, highly detailed."
+    - DO NOT use text/words inside image_prompt or video_prompt. AI models struggle with text rendering.
+
     ${faceContext}
     ${outfitContext}
-    
-    OUTPUT JSON FORMAT REQUIRED:
+
+    OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
       "compliance_check": "Checked",
-      "caption": "string",
-      "cta_button": "string",
+      "caption": "string (Viral social media caption with emojis and hashtags)",
+      "cta_button": "string (Short text for the ad button, e.g., 'Shop Now')",
       "scenes": [
         {
-          "seconds": "string",
-          "visual_description": "string",
-          "audio_script": "string",
-          "on_screen_text": "string",
+          "seconds": "string (e.g., '3')",
+          "visual_description": "string (What the human director needs to know. e.g., 'Close up shot of hands applying serum')",
+          "audio_script": "string (The EXACT spoken voiceover. Keep it punchy)",
+          "on_screen_text": "string (Text overlay popping up on screen. Max 5 words)",
           "media_prompt_details": {
-            "image_prompt": "string (Include character details: ${faceContext.replace(/"/g, "'")})",
-            "image_negative": "string",
-            "video_prompt": "string",
-            "video_negative": "string",
-            "camera_movement": "string",
+            "image_prompt": "string (Highly detailed prompt for FLUX/Midjourney)",
+            "image_negative": "text, watermark, ugly, cartoon, illustration",
+            "video_prompt": "string (Highly detailed prompt for Veo/Sora/CogVideo focusing on motion)",
+            "video_negative": "text, watermark, morphing, blurry",
+            "camera_movement": "string (e.g., 'Static tripod', 'Handheld shaky', 'Smooth pan right')",
             "key_action": "string",
             "video_params": {
                 "duration": "string",
-                "fps": number,
-                "aspect_ratio": "string",
-                "motion_strength": "string"
+                "fps": 30,
+                "aspect_ratio": "9:16",
+                "motion_strength": "5"
             }
           }
         }
@@ -263,14 +293,27 @@ export const generateScenesXai = async (formData: FormData, strategy: Partial<Ge
     `;
 
     const userPrompt = `
-    STRATEGY: ${strategy.concept_title}
-    HOOK: ${strategy.hook_rationale}
-    DURATION: ${formData.constraints.vo_duration_seconds}s
-    SCENES: ${targetSceneCount}
-    LANGUAGE: ${outputLanguage}
-    VISUALS: ${formData.visual_settings.art_style}, ${formData.visual_settings.lighting}
-    ${variationHint ? `VARIATION: ${variationHint}` : ""}
+    STRATEGY TO EXECUTE:
+    - Concept: ${strategy.concept_title}
+    - Hook Rationale: ${strategy.hook_rationale}
+    - Winning Angle: ${strategy.analysis_report?.winning_angle_logic}
+
+    CONSTRAINTS:
+    - Total Target Duration: ${formData.constraints.vo_duration_seconds} seconds
+    - Target Scene Count: ${targetSceneCount} scenes
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Gunakan bahasa gaul/slang sosmed yang sangat natural)'}
+    
+    VISUAL DIRECTION:
+    - Art Style: ${formData.visual_settings.art_style}
+    - Lighting: ${formData.visual_settings.lighting}
+    - Camera Angle: ${formData.visual_settings.camera_angle}
+    - Pacing: ${formData.visual_settings.pacing}
+    
+    ${variationHint ? `\nCRITICAL VARIATION INSTRUCTION:\n${variationHint}` : ""}
+    
+    Write the scenes now. Ensure the sum of 'seconds' roughly equals the Target Duration.
     `;
+
 
     const result = await fetchXai({
         model: model,
@@ -419,24 +462,31 @@ export const generateStrategyGroq = async (formData: FormData, contextText: stri
     const outputLanguage = formData.constraints.language === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
     const model = formData.constraints.ai_model || 'llama-3.3-70b-versatile';
 
-    const systemPrompt = `
-    You are a World-Class Direct Response Copywriter.
-    OUTPUT JSON FORMAT REQUIRED:
+        const systemPrompt = `
+    You are an Elite TikTok/Reels Creative Director & Direct-Response Copywriter.
+    Your goal is to engineer viral, high-converting UGC (User Generated Content) concepts.
+    
+    RULES FOR STRATEGY:
+    1. AVOID CLICHES: Never use generic openings like "Are you tired of...". Use Pattern Interrupts (Visual hooks, bold statements, contrarian opinions, or ASMR/sensory triggers).
+    2. PSYCHOLOGY: Base the angle on deep psychological triggers (Status, FOMO, Laziness, Insecurity, or Desire for Aesthetic).
+    3. GEN-Z/MILLENNIAL TONE: Keep the tone authentic, conversational, and native to short-form platforms.
+    
+    OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
-      "concept_title": "string",
-      "hook_rationale": "string",
+      "concept_title": "string (Catchy, internal agency name for this concept)",
+      "hook_rationale": "string (Why will this stop a user from scrolling within the first 3 seconds?)",
       "analysis_report": {
-        "audience_persona": "string",
-        "core_pain_points": ["string"],
+        "audience_persona": "string (Ultra-specific target, e.g., 'Burnt-out corporate girlies in their 20s')",
+        "core_pain_points": ["string", "string"],
         "emotional_triggers": ["string"],
-        "competitor_gap": "string",
-        "winning_angle_logic": "string"
+        "competitor_gap": "string (What are competitors ignoring that we will highlight?)",
+        "winning_angle_logic": "string (The psychological framework used, e.g., PAS, Us-vs-Them, or Secret Hack)"
       },
       "brand_dna": {
-        "voice_traits": ["string"],
-        "cta_style": "string",
+        "voice_traits": ["string", "string", "string"],
+        "cta_style": "string (How to ask for the sale naturally)",
         "audience_guess": "string",
-        "genz_style_rules": ["string"],
+        "genz_style_rules": ["string (e.g., 'Don't sound like a TV commercial')"],
         "taboo_words": ["string"]
       },
       "product_truth_sheet": {
@@ -449,14 +499,26 @@ export const generateStrategyGroq = async (formData: FormData, contextText: stri
     `;
 
     const userPrompt = `
-    Brand: ${formData.brand.name}
-    Tone: ${formData.brand.tone_hint_optional}
-    Product: ${formData.product.type}
-    Objective: ${formData.product.objective}
-    Context: ${contextText}
-    Language: ${outputLanguage}
-    Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    BRAND INFO:
+    - Name: ${formData.brand.name}
+    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+    
+    PRODUCT INFO:
+    - Type/Item: ${formData.product.type}
+    - Key Feature: ${formData.product.material}
+    - Marketing Objective: ${formData.product.objective}
+    - Requested Angle: ${formData.product.main_angle_optional}
+    
+    CONTEXT / SCRAPED DATA:
+    ${contextText}
+    
+    TARGET SETTINGS:
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
+    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    
+    Task: Analyze the inputs and generate the underlying viral strategy json.
     `;
+
 
     const result = await fetchGroq({
         model: model,
@@ -477,42 +539,53 @@ export const generateScenesGroq = async (formData: FormData, strategy: Partial<G
     const targetSceneCount = formData.constraints.scene_count || 5;
     const model = formData.constraints.ai_model || 'llama-3.3-70b-versatile';
 
-    const faceContext = formData.references?.face_description 
-        ? `[MANDATORY CHARACTER LOCK]: Main character MUST look like this: ${formData.references.face_description}.` 
+        const faceContext = formData.references?.face_description 
+        ? `[MANDATORY CHARACTER LOCK]: Main character MUST look exactly like this: ${formData.references.face_description}. Include this description in EVERY media prompt.` 
         : "";
     const outfitContext = formData.references?.outfit_description 
-        ? `[MANDATORY OUTFIT LOCK]: Character MUST wear: ${formData.references.outfit_description}.` 
+        ? `[MANDATORY OUTFIT LOCK]: Character MUST wear: ${formData.references.outfit_description}. Include this in EVERY media prompt.` 
         : "";
 
     const systemPrompt = `
-    You are an Elite UGC Scriptwriter. Write a production-ready script.
-    
+    You are an Elite UGC Scriptwriter & Expert AI Cinematographer.
+    Your job is to translate a viral strategy into a frame-by-frame production script.
+
+    STRICT PACING RULES:
+    - TikTok/Reels move FAST. Keep scenes between 2 to 6 seconds max.
+    - SCENE 1 MUST be a 3-second visual and auditory Pattern Interrupt (The Hook).
+    - Show, Don't Tell: If the voiceover says "it's waterproof", the visual MUST be splashing water on the product.
+
+    PROMPT ENGINEERING RULES (CRITICAL FOR AI IMAGE/VIDEO GENERATION):
+    - "image_prompt": Must use photography terms. Start with "Raw smartphone photo, UGC style..." or "Cinematic 35mm lens...". Describe lighting, subject, action, and background explicitly. No abstract concepts.
+    - "video_prompt": Describe motion. e.g., "Handheld camera slowly zooming in on [subject] doing [action], natural window lighting, 4k resolution, highly detailed."
+    - DO NOT use text/words inside image_prompt or video_prompt. AI models struggle with text rendering.
+
     ${faceContext}
     ${outfitContext}
-    
-    OUTPUT JSON FORMAT REQUIRED:
+
+    OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
       "compliance_check": "Checked",
-      "caption": "string",
-      "cta_button": "string",
+      "caption": "string (Viral social media caption with emojis and hashtags)",
+      "cta_button": "string (Short text for the ad button, e.g., 'Shop Now')",
       "scenes": [
         {
-          "seconds": "string",
-          "visual_description": "string",
-          "audio_script": "string",
-          "on_screen_text": "string",
+          "seconds": "string (e.g., '3')",
+          "visual_description": "string (What the human director needs to know. e.g., 'Close up shot of hands applying serum')",
+          "audio_script": "string (The EXACT spoken voiceover. Keep it punchy)",
+          "on_screen_text": "string (Text overlay popping up on screen. Max 5 words)",
           "media_prompt_details": {
-            "image_prompt": "string (Include character details: ${faceContext.replace(/"/g, "'")})",
-            "image_negative": "string",
-            "video_prompt": "string",
-            "video_negative": "string",
-            "camera_movement": "string",
+            "image_prompt": "string (Highly detailed prompt for FLUX/Midjourney)",
+            "image_negative": "text, watermark, ugly, cartoon, illustration",
+            "video_prompt": "string (Highly detailed prompt for Veo/Sora/CogVideo focusing on motion)",
+            "video_negative": "text, watermark, morphing, blurry",
+            "camera_movement": "string (e.g., 'Static tripod', 'Handheld shaky', 'Smooth pan right')",
             "key_action": "string",
             "video_params": {
                 "duration": "string",
-                "fps": number,
-                "aspect_ratio": "string",
-                "motion_strength": "string"
+                "fps": 30,
+                "aspect_ratio": "9:16",
+                "motion_strength": "5"
             }
           }
         }
@@ -521,14 +594,27 @@ export const generateScenesGroq = async (formData: FormData, strategy: Partial<G
     `;
 
     const userPrompt = `
-    STRATEGY: ${strategy.concept_title}
-    HOOK: ${strategy.hook_rationale}
-    DURATION: ${formData.constraints.vo_duration_seconds}s
-    SCENES: ${targetSceneCount}
-    LANGUAGE: ${outputLanguage}
-    VISUALS: ${formData.visual_settings.art_style}, ${formData.visual_settings.lighting}
-    ${variationHint ? `VARIATION: ${variationHint}` : ""}
+    STRATEGY TO EXECUTE:
+    - Concept: ${strategy.concept_title}
+    - Hook Rationale: ${strategy.hook_rationale}
+    - Winning Angle: ${strategy.analysis_report?.winning_angle_logic}
+
+    CONSTRAINTS:
+    - Total Target Duration: ${formData.constraints.vo_duration_seconds} seconds
+    - Target Scene Count: ${targetSceneCount} scenes
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Gunakan bahasa gaul/slang sosmed yang sangat natural)'}
+    
+    VISUAL DIRECTION:
+    - Art Style: ${formData.visual_settings.art_style}
+    - Lighting: ${formData.visual_settings.lighting}
+    - Camera Angle: ${formData.visual_settings.camera_angle}
+    - Pacing: ${formData.visual_settings.pacing}
+    
+    ${variationHint ? `\nCRITICAL VARIATION INSTRUCTION:\n${variationHint}` : ""}
+    
+    Write the scenes now. Ensure the sum of 'seconds' roughly equals the Target Duration.
     `;
+
 
     const result = await fetchGroq({
         model: model,
@@ -779,73 +865,83 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
 };
 
 // --- CLOUDFLARE IMAGE GENERATION (Flux Schnell) ---
-export const generateImageCloudflare = async (prompt: string): Promise<string> => {
+// 1. Ganti fungsi Cloudflare Image
+// --- CLOUDFLARE IMAGE GENERATION ---
+export const generateImageCloudflare = async (prompt: string, modelId: string = "@cf/black-forest-labs/flux-1-schnell"): Promise<string> => {
     const accountId = getStoredCloudflareId();
     const apiToken = getStoredCloudflareToken();
+    if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing.");
 
-    if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing for Image Gen. Please check Settings.");
-
-    const modelId = "@cf/black-forest-labs/flux-1-schnell";
+    // URL sekarang menggunakan modelId agar dinamis
+    const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
 
     try {
-        const targetUrl = `${CLOUDFLARE_BASE_URL}/${accountId}/ai/run/${modelId}`;
-        const proxyUrl = `${CORSPROXY_HOST}${encodeURIComponent(targetUrl)}`;
-
-        const response = await fetchWithTimeout(proxyUrl, {
+        const response = await fetchWithTimeout('/api/proxy', {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiToken}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ prompt: prompt, num_steps: 4 })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                provider: "Cloudflare",
+                url: targetUrl,
+                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
+                payload: { prompt: prompt, num_steps: 4 },
+                isBlob: false
+            })
         });
 
         if (!response.ok) {
-             const err = await response.json().catch(() => ({})) as any;
-             throw new Error(`CF Image Gen Failed: ${err.errors?.[0]?.message || response.statusText}`);
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(`CF Proxy Error: ${errData.error || response.statusText}`);
         }
-
+        
         const data = await response.json() as any;
         return `data:image/jpeg;base64,${data.result.image}`;
-    } catch (error: any) {
+    } catch (error) {
         console.error("CF Flux Error:", error);
         throw error;
     }
 };
 
-// --- HUGGING FACE (IMAGE) ---
+
+//togeteher ai
+
+
+
+
+
+// 3. Ganti fungsi Hugging Face Image
 export const generateImageHuggingFace = async (prompt: string, modelId: string = "black-forest-labs/FLUX.1-dev"): Promise<string> => {
     const apiKey = getStoredHuggingFaceKey();
-    if (!apiKey) throw new Error("Hugging Face API Token is missing. Please add it in Settings.");
+    if (!apiKey) throw new Error("Hugging Face API Token missing.");
 
     try {
-        const response = await fetchWithTimeout(`${HUGGINGFACE_API_URL}${modelId}`, {
+        const response = await fetchWithTimeout('/api/proxy', {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-                "x-use-cache": "false"
-            },
-            body: JSON.stringify({ inputs: prompt }) 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                provider: "HuggingFace",
+                url: `https://router.huggingface.co/models/${modelId}`,
+                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                payload: { inputs: prompt },
+                isBlob: true // HF mengembalikan file mentah
+            })
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Hugging Face API Failed: ${response.status} - ${err}`);
-        }
 
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (error: any) {
-        console.error("HF Image Gen Error:", error);
+// GANTI MENJADI:
+if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(`HF Proxy Error: ${errData.error || response.statusText}`);
+}
+
+        const data = await response.json() as any;
+        return `data:image/jpeg;base64,${data.base64}`;
+    } catch (error) {
+        console.error("HF Image Error:", error);
         throw error;
     }
+
 };
+
 
 // --- HUGGING FACE (VIDEO) ---
 export const generateVideoHuggingFace = async (prompt: string, modelId: string = "THUDM/CogVideoX-5b"): Promise<string> => {

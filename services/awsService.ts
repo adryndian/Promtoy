@@ -275,24 +275,31 @@ export const generateStrategyBedrock = async (formData: FormData, contextText: s
 
     const outputLanguage = formData.constraints.language === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
     
-    const systemPrompt = `
-    You are a World-Class Direct Response Copywriter.
-    OUTPUT JSON FORMAT REQUIRED:
+        const systemPrompt = `
+    You are an Elite TikTok/Reels Creative Director & Direct-Response Copywriter.
+    Your goal is to engineer viral, high-converting UGC (User Generated Content) concepts.
+    
+    RULES FOR STRATEGY:
+    1. AVOID CLICHES: Never use generic openings like "Are you tired of...". Use Pattern Interrupts (Visual hooks, bold statements, contrarian opinions, or ASMR/sensory triggers).
+    2. PSYCHOLOGY: Base the angle on deep psychological triggers (Status, FOMO, Laziness, Insecurity, or Desire for Aesthetic).
+    3. GEN-Z/MILLENNIAL TONE: Keep the tone authentic, conversational, and native to short-form platforms.
+    
+    OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
-      "concept_title": "string",
-      "hook_rationale": "string",
+      "concept_title": "string (Catchy, internal agency name for this concept)",
+      "hook_rationale": "string (Why will this stop a user from scrolling within the first 3 seconds?)",
       "analysis_report": {
-        "audience_persona": "string",
-        "core_pain_points": ["string"],
+        "audience_persona": "string (Ultra-specific target, e.g., 'Burnt-out corporate girlies in their 20s')",
+        "core_pain_points": ["string", "string"],
         "emotional_triggers": ["string"],
-        "competitor_gap": "string",
-        "winning_angle_logic": "string"
+        "competitor_gap": "string (What are competitors ignoring that we will highlight?)",
+        "winning_angle_logic": "string (The psychological framework used, e.g., PAS, Us-vs-Them, or Secret Hack)"
       },
       "brand_dna": {
-        "voice_traits": ["string"],
-        "cta_style": "string",
+        "voice_traits": ["string", "string", "string"],
+        "cta_style": "string (How to ask for the sale naturally)",
         "audience_guess": "string",
-        "genz_style_rules": ["string"],
+        "genz_style_rules": ["string (e.g., 'Don't sound like a TV commercial')"],
         "taboo_words": ["string"]
       },
       "product_truth_sheet": {
@@ -305,14 +312,26 @@ export const generateStrategyBedrock = async (formData: FormData, contextText: s
     `;
 
     const userPrompt = `
-    Brand: ${formData.brand.name}
-    Tone: ${formData.brand.tone_hint_optional}
-    Product: ${formData.product.type}
-    Objective: ${formData.product.objective}
-    Context: ${contextText}
-    Language: ${outputLanguage}
-    Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    BRAND INFO:
+    - Name: ${formData.brand.name}
+    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+    
+    PRODUCT INFO:
+    - Type/Item: ${formData.product.type}
+    - Key Feature: ${formData.product.material}
+    - Marketing Objective: ${formData.product.objective}
+    - Requested Angle: ${formData.product.main_angle_optional}
+    
+    CONTEXT / SCRAPED DATA:
+    ${contextText}
+    
+    TARGET SETTINGS:
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
+    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    
+    Task: Analyze the inputs and generate the underlying viral strategy json.
     `;
+
 
     // Construct Body based on Model Family
     let body: any = {};
@@ -406,37 +425,63 @@ export const generateScenesBedrock = async (formData: FormData, strategy: Partia
     const outputLanguage = formData.constraints.language === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
     const targetSceneCount = formData.constraints.scene_count || 5;
 
-    const systemPrompt = `
-    You are an Elite UGC Scriptwriter. Write a production-ready script.
-    OUTPUT JSON FORMAT REQUIRED:
+        const systemPrompt = `
+    You are an Elite TikTok/Reels Creative Director & Direct-Response Copywriter.
+    Your goal is to engineer viral, high-converting UGC (User Generated Content) concepts.
+    
+    RULES FOR STRATEGY:
+    1. AVOID CLICHES: Never use generic openings like "Are you tired of...". Use Pattern Interrupts (Visual hooks, bold statements, contrarian opinions, or ASMR/sensory triggers).
+    2. PSYCHOLOGY: Base the angle on deep psychological triggers (Status, FOMO, Laziness, Insecurity, or Desire for Aesthetic).
+    3. GEN-Z/MILLENNIAL TONE: Keep the tone authentic, conversational, and native to short-form platforms.
+    
+    OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
-      "compliance_check": "Checked",
-      "caption": "string",
-      "cta_button": "string",
-      "scenes": [
-        {
-          "seconds": "string",
-          "visual_description": "string",
-          "audio_script": "string",
-          "on_screen_text": "string",
-          "media_prompt_details": {
-            "image_prompt": "string",
-            "video_prompt": "string"
-          }
-        }
-      ]
+      "concept_title": "string (Catchy, internal agency name for this concept)",
+      "hook_rationale": "string (Why will this stop a user from scrolling within the first 3 seconds?)",
+      "analysis_report": {
+        "audience_persona": "string (Ultra-specific target, e.g., 'Burnt-out corporate girlies in their 20s')",
+        "core_pain_points": ["string", "string"],
+        "emotional_triggers": ["string"],
+        "competitor_gap": "string (What are competitors ignoring that we will highlight?)",
+        "winning_angle_logic": "string (The psychological framework used, e.g., PAS, Us-vs-Them, or Secret Hack)"
+      },
+      "brand_dna": {
+        "voice_traits": ["string", "string", "string"],
+        "cta_style": "string (How to ask for the sale naturally)",
+        "audience_guess": "string",
+        "genz_style_rules": ["string (e.g., 'Don't sound like a TV commercial')"],
+        "taboo_words": ["string"]
+      },
+      "product_truth_sheet": {
+        "core_facts": ["string"],
+        "required_disclaimer": "string",
+        "safe_benefit_phrases": ["string"],
+        "forbidden_claims": ["string"]
+      }
     }
     `;
 
     const userPrompt = `
-    STRATEGY: ${strategy.concept_title}
-    HOOK: ${strategy.hook_rationale}
-    DURATION: ${formData.constraints.vo_duration_seconds}s
-    SCENES: ${targetSceneCount}
-    LANGUAGE: ${outputLanguage}
-    VISUALS: ${formData.visual_settings.art_style}, ${formData.visual_settings.lighting}, ${formData.visual_settings.camera_angle}, ${formData.visual_settings.shot_type || 'Medium shot'}, ${formData.visual_settings.visual_effects || 'None'}
-    ${variationHint ? `VARIATION: ${variationHint}` : ""}
+    BRAND INFO:
+    - Name: ${formData.brand.name}
+    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+    
+    PRODUCT INFO:
+    - Type/Item: ${formData.product.type}
+    - Key Feature: ${formData.product.material}
+    - Marketing Objective: ${formData.product.objective}
+    - Requested Angle: ${formData.product.main_angle_optional}
+    
+    CONTEXT / SCRAPED DATA:
+    ${contextText}
+    
+    TARGET SETTINGS:
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
+    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    
+    Task: Analyze the inputs and generate the underlying viral strategy json.
     `;
+
 
     let body: any = {};
     

@@ -1,6 +1,9 @@
 import React from 'react';
 import { Scene } from '../types';
-import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Maximize2, Video as VideoIcon, Volume2, Headphones, RefreshCw, ChevronRight } from 'lucide-react';
+// Pastikan Loader2 dan Monitor ada di daftar di bawah ini:
+import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight } from 'lucide-react';
+
+
 
 interface SceneCardProps {
     scene: Scene;

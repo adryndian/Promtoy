@@ -1,13 +1,19 @@
+import { uploadBase64Asset } from '../services/cloudflareService';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GeneratedAsset, Scene } from '../types';
 import { useAppContext } from '../store/AppContext';
 import { SceneCard } from './SceneCard';
+// Tambahkan Loader2 di baris import lucide-react ini:
+
+
 import { generateSpeech, getWavBlob, analyzeVoiceStyle, generateImagePreview, generateVideo } from '../services/geminiService';
 import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudflare, generateImageXai } from '../services/externalService';
 import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
 import { generateImageBedrock, generateSpeechBedrock } from '../services/awsService';
 import { fetchElevenLabsVoices, generateElevenLabsSpeech, ElevenLabsVoice, ELEVENLABS_MODELS, ElevenLabsSettings } from '../services/elevenLabsService';
-import { Clapperboard, Download, Maximize2, Settings2, SlidersHorizontal, FileText, FileJson, Printer, Brain, Target, Shield, Users, Megaphone, Check, Lightbulb, ChevronDown, ChevronUp, X } from 'lucide-react';
+import JSZip from 'jszip';
+import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight, Archive } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
 const GEMINI_VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
@@ -209,23 +215,31 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
              url = reader.result as string;
         }
         
-        setAudioUrls(prev => ({ ...prev, [cacheKey]: url }));
+                // 🔥 CEGAT DI SINI: Upload Audio ke R2
+        const r2Url = await uploadBase64Asset(url, 'audio/mp3', `voice-${activeVoice}-${Date.now()}.mp3`);
+        const finalUrl = r2Url || url;
+
+        setAudioUrls(prev => ({ ...prev, [cacheKey]: finalUrl }));
         
         setAudioHistory(prev => {
             const currentHistory = prev[cacheKey] || [];
-            const newEntry = { url, model: `${ttsProvider}-${activeVoice}`, timestamp: Date.now() };
+            const newEntry = { url: finalUrl, model: `${ttsProvider}-${activeVoice}`, timestamp: Date.now() };
             return { ...prev, [cacheKey]: [newEntry, ...currentHistory].slice(0, 5) };
         });
 
-        if (data && onUpdate) {
+                if (data && onUpdate) {
             const updatedData = JSON.parse(JSON.stringify(data)) as GeneratedAsset;
             if (updatedData.variations && updatedData.variations[activeVariationIndex]) {
-                 updatedData.variations[activeVariationIndex].scenes[idx].generated_audio = url;
+                 updatedData.variations[activeVariationIndex].scenes[idx].generated_audio = finalUrl;
             } else if (updatedData.scenes) {
-                 updatedData.scenes[idx].generated_audio = url;
+                 updatedData.scenes[idx].generated_audio = finalUrl;
             }
             onUpdate(updatedData);
         }
+        
+        // 🔥 TAMBAHKAN 1 BARIS INI SEBELUM KURUNG KURAWAL TUTUP:
+        url = finalUrl;
+
       }
       
       const audio = new Audio(url);
@@ -260,9 +274,21 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
       try {
           let imageUrl = "";
           
-          if (activeImageModel === 'cf-flux-schnell') {
-               imageUrl = await generateImageCloudflare(promptToUse);
-          } else if (activeImageModel === 'grok-2-image') {
+                    if (activeImageModel.startsWith('cf-')) {
+               let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
+               
+               if (activeImageModel === 'cf-flux-2-dev') {
+                   modelId = "@cf/black-forest-labs/flux-2-dev";
+               } else if (activeImageModel === 'cf-flux-2-klein') {
+                   modelId = "@cf/black-forest-labs/flux-2-klein-9b";
+               }
+
+               imageUrl = await generateImageCloudflare(promptToUse, modelId);
+          } 
+
+  
+  else if (activeImageModel === 'grok-2-image') {
+
                imageUrl = await generateImageXai(promptToUse);
           } else if (activeImageModel.startsWith('aws-') || activeImageModel.startsWith('amazon.')) {
                let modelId = activeImageModel;
@@ -279,17 +305,24 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
               imageUrl = await generateImagePreview(promptToUse, aspectRatio, activeImageModel);
           }
 
-          if (imageUrl) {
-              setPreviewImages(prev => ({ ...prev, [cacheKey]: imageUrl }));
+                   if (imageUrl) {
+              // 🔥 CEGAT DI SINI: Upload gambar ke R2 sebelum disimpan ke State/D1
+              const ext = activeImageModel.includes('flux') ? 'png' : 'jpg';
+              const r2Url = await uploadBase64Asset(imageUrl, `image/${ext}`, `scene-${idx}-${Date.now()}.${ext}`);
+              const finalUrl = r2Url || imageUrl; // Jika R2 gagal, tetap gunakan base64 sebagai fallback
+
+              setPreviewImages(prev => ({ ...prev, [cacheKey]: finalUrl }));
               if (data && onUpdate) {
                 const updatedData = JSON.parse(JSON.stringify(data)) as GeneratedAsset;
                 if (updatedData.variations && updatedData.variations[activeVariationIndex]) {
-                     updatedData.variations[activeVariationIndex].scenes[idx].generated_image = imageUrl;
+                     updatedData.variations[activeVariationIndex].scenes[idx].generated_image = finalUrl;
                 } else if (updatedData.scenes) {
-                     updatedData.scenes[idx].generated_image = imageUrl;
+                     updatedData.scenes[idx].generated_image = finalUrl;
                 }
                 onUpdate(updatedData);
               }
+    
+
           } else {
               alert("Failed to generate preview image.");
           }
@@ -446,6 +479,83 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
     printWindow.document.write(html);
     printWindow.document.close();
   };
+  
+    const [isExportingZip, setIsExportingZip] = useState(false);
+
+  const handleExportZIP = async () => {
+    if (!data) return;
+    setIsExportingZip(true);
+    
+    try {
+        const zip = new JSZip();
+        const scenes = getActiveScenes();
+
+        // 1. Masukkan Naskah Teks
+        let txt = `TITLE: ${data.concept_title}\nHOOK: ${data.hook_rationale}\nANGLE: ${data.analysis_report?.winning_angle_logic}\n\n`;
+        scenes.forEach((scene, i) => {
+            txt += `SCENE ${i + 1} (${scene.seconds}s)\n`;
+            txt += `VISUAL: ${scene.visual_description}\n`;
+            txt += `AUDIO: ${scene.audio_script}\n`;
+            txt += `OVERLAY: ${scene.on_screen_text}\n\n`;
+        });
+        zip.file("1_Master_Script.txt", txt);
+
+        // 2. Fungsi pembantu untuk mengunduh media menjadi Blob
+        const fetchAsBlob = async (url: string) => {
+            const res = await fetch(url);
+            return await res.blob();
+        };
+
+        // 3. Masukkan Semua Media per Scene
+        const mediaPromises = scenes.map(async (scene, i) => {
+            const cacheKey = `${activeVariationIndex}-${i}`;
+            const folderName = `Scene_${i + 1}`;
+            const folder = zip.folder(folderName);
+            
+            if (!folder) return;
+
+            // Ambil Video atau Gambar
+            if (previewVideos[cacheKey]) {
+                const blob = await fetchAsBlob(previewVideos[cacheKey]);
+                folder.file(`Video_${i + 1}.mp4`, blob);
+            } else if (previewImages[cacheKey]) {
+                const blob = await fetchAsBlob(previewImages[cacheKey]);
+                const ext = previewImages[cacheKey].includes('png') ? 'png' : 'jpg';
+                folder.file(`Image_${i + 1}.${ext}`, blob);
+            }
+
+            // Ambil Voiceover
+            if (audioUrls[cacheKey]) {
+                const blob = await fetchAsBlob(audioUrls[cacheKey]);
+                folder.file(`Voiceover_${i + 1}.mp3`, blob);
+            }
+        });
+
+        await Promise.all(mediaPromises);
+
+        // 4. Generate dan Download ZIP
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(zipBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${data.concept_title.replace(/\s+/g, '_')}_Assets.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error("ZIP Export failed", error);
+        alert("Gagal membuat file ZIP. Pastikan semua gambar dan audio sudah di-generate.");
+    } finally {
+        setIsExportingZip(false);
+    }
+  };
+
+  
+  
+  
+  
 
   if (!data) return (
     <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl bg-white/40 p-8">
@@ -545,9 +655,123 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                 <div className="w-px h-4 bg-slate-200 hidden sm:block dark:bg-slate-600"></div>
                 <button onClick={handleExportJSON} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 hover:shadow-sm transition-all dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-brand-400"><FileJson className="w-3.5 h-3.5" /> JSON</button>
                 <div className="w-px h-4 bg-slate-200 hidden sm:block dark:bg-slate-600"></div>
-                <button onClick={handlePrint} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 hover:shadow-sm transition-all dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-brand-400"><Printer className="w-3.5 h-3.5" /> PDF</button>
+                                <button onClick={handlePrint} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 hover:shadow-sm transition-all dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-brand-400"><Printer className="w-3.5 h-3.5" /> PDF</button>
+                
+                {/* TOMBOL ZIP BARU */}
+                <div className="w-px h-4 bg-slate-200 hidden sm:block dark:bg-slate-600"></div>
+                <button 
+                    onClick={handleExportZIP} 
+                    disabled={isExportingZip}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black bg-brand-50 text-brand-600 border border-brand-200 hover:bg-brand-500 hover:text-white hover:shadow-md transition-all disabled:opacity-50 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-900/50 dark:hover:bg-brand-600 dark:hover:text-white"
+                >
+                    {isExportingZip ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />} 
+                    {isExportingZip ? 'PACKING...' : 'ZIP ALL ASSETS'}
+                </button>
+
             </div>
           </div>
+
+          {/* 🔥 PASTE KODE YANG HILANG DI SINI (MULAI DARI SINI) 🔥 */}
+          <div className="mt-4 space-y-3">
+            {/* Row 1: Voice Control */}
+            <div className="-mx-5 px-5 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-3 min-w-max pb-1">
+                    <div className="flex items-center gap-3 text-xs text-brand-700 bg-brand-50 px-4 py-2 rounded-full border border-brand-200 whitespace-nowrap dark:bg-brand-900/20 dark:text-brand-300 dark:border-brand-900/30">
+                    <Mic className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-1 bg-white rounded p-0.5 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-700">
+                        <button onClick={() => handleProviderChange('gemini')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'gemini' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>Gemini</button>
+                        <button onClick={() => handleProviderChange('aws')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'aws' ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>AWS (Polly/Nova)</button>
+                        <button onClick={() => handleProviderChange('elevenlabs')} className={`px-2 py-0.5 rounded transition-all font-medium ${ttsProvider === 'elevenlabs' ? 'bg-orange-500/80 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}>ElevenLabs</button>
+                    </div>
+                    <span className="text-brand-300 dark:text-brand-800">|</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-brand-800/70 uppercase font-bold tracking-wider dark:text-brand-300/70">Voice:</span>
+                        <select value={activeVoice} onChange={(e) => handleVoiceChange(e.target.value)} className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-brand-600 transition-colors max-w-[100px] truncate dark:text-slate-200 dark:hover:text-brand-400">
+                        {ttsProvider === 'gemini' ? GEMINI_VOICES.map(v => <option key={v} value={v} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-200">{v}</option>) 
+                        : ttsProvider === 'aws' ? [...POLLY_VOICES, ...NOVA_VOICES].map(v => <option key={v} value={v} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-200">{v}</option>)
+                        : elevenLabsVoices.length > 0 ? elevenLabsVoices.map(v => <option key={v.voice_id} value={v.voice_id} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-200">{v.name}</option>)
+                        : <option className="bg-white text-slate-400 dark:bg-slate-800 dark:text-slate-500">Loading/No Key...</option>}
+                        </select>
+                    </div>
+
+                    {ttsProvider === 'aws' && (
+                        <>
+                            <span className="text-brand-300 dark:text-brand-800">|</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-brand-800/70 uppercase font-bold tracking-wider dark:text-brand-300/70">Speed:</span>
+                                <select 
+                                    value={awsSpeed} 
+                                    onChange={(e) => setAwsSpeed(e.target.value)} 
+                                    className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-brand-600 transition-colors dark:text-slate-200 dark:hover:text-brand-400"
+                                >
+                                    <option value="0.8" className="dark:bg-slate-800">0.8x</option>
+                                    <option value="1.0" className="dark:bg-slate-800">1.0x</option>
+                                    <option value="1.2" className="dark:bg-slate-800">1.2x</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Row 2: Visual Controls */}
+            <div className="-mx-5 px-5 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-3 min-w-max pb-1">
+                    <div className="flex items-center gap-3 text-xs text-purple-700 bg-purple-50 px-4 py-2 rounded-full border border-purple-200 whitespace-nowrap dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-900/30">
+                    <Aperture className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-2">
+                        <span className="text-purple-800/70 uppercase font-bold tracking-wider dark:text-purple-300/70">Image:</span>
+                                                <select 
+                            value={activeImageModel}
+                            onChange={(e) => setActiveImageModel(e.target.value)}
+                            className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-purple-600 transition-colors max-w-[120px] truncate dark:text-slate-200 dark:hover:text-purple-400"
+                        >
+                            <optgroup label="Google">
+                                <option value="gemini-3-pro-image-preview" className="dark:bg-slate-800">Gemini 3 Pro</option>
+                                <option value="gemini-2.5-flash-image" className="dark:bg-slate-800">Gemini 2.5</option>
+                            </optgroup>
+       //dropdown image model 
+    <optgroup label="External AI">
+    <option value="cf-flux-2-dev" className="dark:bg-slate-800">CF Flux 2 (Dev)</option>
+    <option value="cf-flux-2-klein" className="dark:bg-slate-800">CF Flux 2 (Klein 9B)</option>
+    <option value="cf-flux-schnell" className="dark:bg-slate-800">CF Flux 1 (Schnell)</option>
+    <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
+    <option value="together-flux" className="dark:bg-slate-800">Together FLUX</option>
+    <option value="hf-flux-dev" className="dark:bg-slate-800">HF FLUX Dev</option>
+</optgroup>
+
+                        </select>
+
+                    </div>
+                    <span className="text-purple-300 dark:text-purple-800">|</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-purple-800/70 uppercase font-bold tracking-wider dark:text-purple-300/70">Video:</span>
+                                                <select 
+                            value={activeVideoModel}
+                            onChange={(e) => setActiveVideoModel(e.target.value)}
+                            className="bg-transparent text-slate-800 font-bold border-none focus:ring-0 cursor-pointer p-0 text-xs appearance-none hover:text-purple-600 transition-colors max-w-[120px] truncate dark:text-slate-200 dark:hover:text-purple-400"
+                        >
+                            <option value="veo-3.1-fast-generate-preview" className="dark:bg-slate-800">Veo Fast</option>
+                            <option value="veo-3.1-generate-preview" className="dark:bg-slate-800">Veo Quality</option>
+                            <option value="hf-cogvideo" className="dark:bg-slate-800">HF CogVideo</option>
+                            <option value="dashscope-wanx-video" className="dark:bg-slate-800">Wanx Video</option>
+                        </select>
+
+                    </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-full border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                        <div className="flex items-center gap-1 pr-1">
+                            {[{ val: "9:16", icon: Smartphone }, { val: "16:9", icon: Monitor }, { val: "1:1", icon: Tablet }].map(r => (
+                                <button key={r.val} onClick={() => setAspectRatio(r.val as AspectRatio)} className={`p-1.5 rounded-full transition-all ${aspectRatio === r.val ? 'bg-white text-brand-600 shadow-sm border border-slate-200 dark:bg-slate-700 dark:text-brand-400 dark:border-slate-600' : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'}`}><r.icon className="w-3.5 h-3.5" /></button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+          {/* 🔥 SAMPAI DI SINI 🔥 */}
 
         </div>
       </div>
