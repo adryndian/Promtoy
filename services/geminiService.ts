@@ -218,20 +218,35 @@ export const generateStrategy = async (formData: FormData, contextText: string):
     required: ["concept_title", "hook_rationale", "brand_dna", "product_truth_sheet", "analysis_report"]
   };
 
-  const prompt = `
-    ROLE: You are a World-Class Direct Response Copywriter.
-    INPUT DATA:
-    Brand: ${formData.brand.name}
-    Tone: ${formData.brand.tone_hint_optional}
-    Product: ${formData.product.type} (${formData.product.material})
-    Objective: ${formData.product.objective}
-    Target Platform: ${formData.product.platform.join(', ')}
-    Context: ${contextText}
-    Language: ${outputLanguage}
-    Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    const prompt = `
+    You are an Elite TikTok/Reels Creative Director & Direct-Response Copywriter.
+    Your goal is to engineer viral, high-converting UGC (User Generated Content) concepts.
 
-    OUTPUT: Analysis Report in JSON.
+    RULES FOR STRATEGY:
+    1. AVOID CLICHES: Never use generic openings like "Are you tired of...". Use Pattern Interrupts (Visual hooks, bold statements, contrarian opinions, or ASMR/sensory triggers).
+    2. PSYCHOLOGY: Base the angle on deep psychological triggers (Status, FOMO, Laziness, Insecurity, or Desire for Aesthetic).
+    3. GEN-Z/MILLENNIAL TONE: Keep the tone authentic, conversational, and native to short-form platforms.
+
+    BRAND INFO:
+    - Name: ${formData.brand.name}
+    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+
+    PRODUCT INFO:
+    - Type/Item: ${formData.product.type}
+    - Key Feature: ${formData.product.material}
+    - Marketing Objective: ${formData.product.objective}
+    - Requested Angle: ${formData.product.main_angle_optional}
+
+    CONTEXT / SCRAPED DATA:
+    ${contextText}
+
+    TARGET SETTINGS:
+    - Language: ${outputLanguage}
+    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+
+    Task: Analyze the inputs and generate the underlying viral strategy based on the provided schema.
   `;
+
 
   const executeGen = async (modelName: string, budget: number) => {
     return retryOperation(async () => {
@@ -353,35 +368,46 @@ export const generateScenes = async (formData: FormData, strategy: Partial<Gener
     required: ["scenes", "caption", "cta_button", "compliance_check"]
   };
 
-  const prompt = `
-    ROLE: Elite UGC Scriptwriter.
-    TASK: Write a frame-by-frame script.
-    ${variationHint ? `\nVARIATION: ${variationHint} \n` : ""}
+    const prompt = `
+    You are an Elite UGC Scriptwriter & Expert AI Cinematographer.
+    Your job is to translate a viral strategy into a frame-by-frame production script.
 
-    CONTEXT:
-    Concept: ${strategy.concept_title}
-    Angle: ${strategy.analysis_report?.winning_angle_logic}
-    Hook: ${strategy.hook_rationale}
-    ${faceLock}
-    ${outfitLock}
+    STRICT PACING RULES:
+    - TikTok/Reels move FAST. Keep scenes between 2 to 6 seconds max.
+    - SCENE 1 MUST be a 3-second visual and auditory Pattern Interrupt (The Hook).
+    - Show, Don't Tell: If the voiceover says "it's waterproof", the visual MUST be splashing water on the product.
+
+    PROMPT ENGINEERING RULES (CRITICAL FOR AI IMAGE/VIDEO GENERATION):
+    - "image_prompt": Must use photography terms. Start with "Raw smartphone photo, UGC style..." or "Cinematic 35mm lens...". Describe lighting, subject, action, and background explicitly. No abstract concepts.
+    - "video_prompt": Describe motion. e.g., "Handheld camera slowly zooming in on [subject] doing [action], natural window lighting, 4k resolution, highly detailed."
+    - DO NOT use text/words inside image_prompt or video_prompt. AI models struggle with text rendering.
+
+    STRATEGY TO EXECUTE:
+    - Concept: ${strategy.concept_title}
+    - Hook Rationale: ${strategy.hook_rationale}
+    - Winning Angle: ${strategy.analysis_report?.winning_angle_logic}
 
     CONSTRAINTS:
-    Duration: ${formData.constraints.vo_duration_seconds}s
-    Scenes: ${targetSceneCount}
-    Language: ${outputLanguage}
-    Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
+    - Total Target Duration: ${formData.constraints.vo_duration_seconds} seconds
+    - Target Scene Count: ${targetSceneCount} scenes
+    - Language: ${outputLanguage}
+    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
 
     VISUAL DIRECTION:
     - Lighting: ${visualSettings.lighting}
-    - Angle: ${visualSettings.camera_angle}
-    - Style: ${visualSettings.art_style}
+    - Camera Angle: ${visualSettings.camera_angle}
+    - Art Style: ${visualSettings.art_style}
     - Shot Type: ${visualSettings.shot_type || 'Medium shot'}
     - Visual Effects: ${visualSettings.visual_effects || 'None'}
-
-    MEDIA PROMPTS:
-    1. **image_prompt**: Highly detailed for Flux/Midjourney. MUST include Character/Outfit details if locked.
-    2. **video_prompt**: Focused on MOTION for Veo/CogVideo.
+    
+    ${faceLock}
+    ${outfitLock}
+    
+    ${variationHint ? `\nCRITICAL VARIATION INSTRUCTION:\n${variationHint}` : ""}
+    
+    Write the scenes now. Ensure the sum of 'seconds' roughly equals the Target Duration.
   `;
+
 
   const executeGen = async (modelName: string, budget: number) => {
     return retryOperation(async () => {
