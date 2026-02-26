@@ -865,10 +865,30 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
 };
 
 // --- CLOUDFLARE IMAGE GENERATION ---
-export const generateImageCloudflare = async (prompt: string, modelId: string = "@cf/black-forest-labs/flux-1-schnell"): Promise<string> => {
+// --- CLOUDFLARE IMAGE GENERATION ---
+export const generateImageCloudflare = async (
+    prompt: string, 
+    modelId: string = "@cf/black-forest-labs/flux-1-schnell",
+    aspectRatio: string = "9:16" // Tambahan parameter dari UI
+): Promise<string> => {
     const accountId = getStoredCloudflareId();
     const apiToken = getStoredCloudflareToken();
     if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing.");
+
+    // Logika pengubah Aspect Ratio ke Pixel (Kelipatan 8 yang aman untuk memori server)
+    let width = 1024;
+    let height = 1024;
+
+    if (aspectRatio === "9:16") {
+        width = 576;
+        height = 1024;
+    } else if (aspectRatio === "16:9") {
+        width = 1024;
+        height = 576;
+    } else if (aspectRatio === "1:1") {
+        width = 1024;
+        height = 1024;
+    }
 
     const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
 
@@ -879,17 +899,15 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
             body: JSON.stringify({
                 provider: "Cloudflare",
                 url: targetUrl,
-                                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
-                // KITA KIRIM PAKET LENGKAP AGAR SERVER TIDAK BINGUNG:
-                payload: {
+                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
+                payload: { 
                     prompt: prompt,
-                    num_steps: 20, // Jumlah langkah standar yang aman
-                    height: 1024,  // Resolusi standar
-                    width: 1024    // Resolusi standar
+                    num_steps: 20,
+                    width: width,   // Masukkan lebar dinamis
+                    height: height  // Masukkan tinggi dinamis
                 },
                 isBlob: true
             })
-
         });
 
         if (!response.ok) {
@@ -898,7 +916,7 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
         }
         
         const data = await response.json() as any;
-        return `data:image/jpeg;base64,${data.base64}`; // 🔥 FIX 3: Ambil dari base64
+        return `data:image/jpeg;base64,${data.base64}`;
     } catch (error) {
         console.error("CF Flux Error:", error);
         throw error;
