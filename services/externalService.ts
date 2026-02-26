@@ -198,26 +198,28 @@ export const generateStrategyXai = async (formData: FormData, contextText: strin
     }
     `;
 
-    const userPrompt = `
-    BRAND INFO:
-    - Name: ${formData.brand.name}
-    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+        const userPrompt = `
+    STRATEGY TO EXECUTE:
+    - Concept: ${strategy.concept_title}
+    - Hook Rationale: ${strategy.hook_rationale}
+    - Winning Angle: ${strategy.analysis_report?.winning_angle_logic}
+
+    CONSTRAINTS:
+    - Total Target Duration: ${formData.constraints.vo_duration_seconds} seconds
+    - Target Scene Count: ${targetSceneCount} scenes
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Gunakan bahasa gaul/slang sosmed yang sangat natural)'}
     
-    PRODUCT INFO:
-    - Type/Item: ${formData.product.type}
-    - Key Feature: ${formData.product.material}
-    - Marketing Objective: ${formData.product.objective}
-    - Requested Angle: ${formData.product.main_angle_optional}
+    VISUAL DIRECTION:
+    - Art Style: ${formData.visual_settings.art_style}
+    - Lighting: ${formData.visual_settings.lighting}
+    - Camera Angle: ${formData.visual_settings.camera_angle}
+    - Pacing: ${formData.visual_settings.pacing}
     
-    CONTEXT / SCRAPED DATA:
-    ${contextText}
+    ${variationHint ? `\nCRITICAL VARIATION INSTRUCTION:\n${variationHint}` : ""}
     
-    TARGET SETTINGS:
-    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
-    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
-    
-    Task: Analyze the inputs and generate the underlying viral strategy json.
+    Write the scenes now. Ensure the sum of 'seconds' roughly equals the Target Duration.
     `;
+
 
 
     const result = await fetchXai({
@@ -865,30 +867,10 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
 };
 
 // --- CLOUDFLARE IMAGE GENERATION ---
-// --- CLOUDFLARE IMAGE GENERATION ---
-export const generateImageCloudflare = async (
-    prompt: string, 
-    modelId: string = "@cf/black-forest-labs/flux-1-schnell",
-    aspectRatio: string = "9:16" // Tambahan parameter dari UI
-): Promise<string> => {
+export const generateImageCloudflare = async (prompt: string, modelId: string = "@cf/black-forest-labs/flux-1-schnell"): Promise<string> => {
     const accountId = getStoredCloudflareId();
     const apiToken = getStoredCloudflareToken();
     if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing.");
-
-    // Logika pengubah Aspect Ratio ke Pixel (Kelipatan 8 yang aman untuk memori server)
-    let width = 1024;
-    let height = 1024;
-
-    if (aspectRatio === "9:16") {
-        width = 576;
-        height = 1024;
-    } else if (aspectRatio === "16:9") {
-        width = 1024;
-        height = 576;
-    } else if (aspectRatio === "1:1") {
-        width = 1024;
-        height = 1024;
-    }
 
     const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
 
@@ -900,12 +882,8 @@ export const generateImageCloudflare = async (
                 provider: "Cloudflare",
                 url: targetUrl,
                 headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
-                payload: { 
-                    prompt: prompt,
-                    num_steps: 20,
-                    width: width,   // Masukkan lebar dinamis
-                    height: height  // Masukkan tinggi dinamis
-                },
+                // KEMBALI KE PAYLOAD PALING AMAN (Hanya Prompt):
+                payload: { prompt: prompt }, 
                 isBlob: true
             })
         });
@@ -922,6 +900,7 @@ export const generateImageCloudflare = async (
         throw error;
     }
 };
+
 
 // --- HUGGING FACE IMAGE GENERATION ---
 export const generateImageHuggingFace = async (prompt: string, modelId: string = "black-forest-labs/FLUX.1-dev"): Promise<string> => {
