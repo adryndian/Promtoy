@@ -311,26 +311,28 @@ export const generateStrategyBedrock = async (formData: FormData, contextText: s
     }
     `;
 
-    const userPrompt = `
-    BRAND INFO:
-    - Name: ${formData.brand.name}
-    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+        const userPrompt = `
+    STRATEGY TO EXECUTE:
+    - Concept: ${strategy.concept_title}
+    - Hook Rationale: ${strategy.hook_rationale}
+    - Winning Angle: ${strategy.analysis_report?.winning_angle_logic}
+
+    CONSTRAINTS:
+    - Total Target Duration: ${formData.constraints.vo_duration_seconds} seconds
+    - Target Scene Count: ${targetSceneCount} scenes
+    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Gunakan bahasa gaul/slang sosmed yang sangat natural)'}
     
-    PRODUCT INFO:
-    - Type/Item: ${formData.product.type}
-    - Key Feature: ${formData.product.material}
-    - Marketing Objective: ${formData.product.objective}
-    - Requested Angle: ${formData.product.main_angle_optional}
+    VISUAL DIRECTION:
+    - Art Style: ${formData.visual_settings.art_style}
+    - Lighting: ${formData.visual_settings.lighting}
+    - Camera Angle: ${formData.visual_settings.camera_angle}
+    - Pacing: ${formData.visual_settings.pacing}
     
-    CONTEXT / SCRAPED DATA:
-    ${contextText}
+    ${variationHint ? `\nCRITICAL VARIATION INSTRUCTION:\n${variationHint}` : ""}
     
-    TARGET SETTINGS:
-    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
-    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
-    
-    Task: Analyze the inputs and generate the underlying viral strategy json.
+    Write the scenes now. Ensure the sum of 'seconds' roughly equals the Target Duration.
     `;
+
 
 
     // Construct Body based on Model Family
