@@ -641,9 +641,10 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenSettings, 
                             <option value="us.amazon.titan-image-generator-v2:0">Titan Image Gen v2 (US)</option>
                         </optgroup>
                         <optgroup label="Cloudflare (New)">
-                             <option value="cf-flux-schnell">Flux 1 Schnell (Cloudflare)</option>
-<option value="cf-flux-2-dev">Flux 2 dev (Cloudflare)</option>
-<option value="cf-flux-2-klein">Flux 2 klein (Cloudflare)</option>
+                             <option value="cf-flux-schnell">Flux 1 Schnell</option>
+<option value="cf-flux-2-dev">Flux 2 dev</option>
+<option value="cf-flux-2-klein">Flux 2 klein</option>
+<option value="cf-stable-diffusion-xl-lightning">Stable diffusion xl lightning</option>
                         </optgroup>
                         <optgroup label="Hugging Face (Requires Token)">
                             <option value="hf-flux-dev">FLUX.1-dev (HuggingFace)</option>
