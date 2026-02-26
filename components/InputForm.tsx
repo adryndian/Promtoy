@@ -642,6 +642,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenSettings, 
                         </optgroup>
                         <optgroup label="Cloudflare (New)">
                              <option value="cf-flux-schnell">Flux 1 Schnell</option>
+                          <option value="cf-flux-2-klein-4b">Flux klein 4b</option>
 <option value="cf-flux-2-dev">Flux 2 dev</option>
 <option value="cf-flux-2-klein">Flux 2 klein</option>
 <option value="cf-stable-diffusion-xl-lightning">Stable diffusion xl lightning</option>
