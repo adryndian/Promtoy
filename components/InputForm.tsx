@@ -601,10 +601,10 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenSettings, 
                         <optgroup label="xAI (Grok)">
                             <option value="grok-3">Grok 3 (Latest 2026)</option>
                             <option value="grok-2">Grok 2 (Stable)</option>
-                            <option value="grok-beta">Grok Beta</option>
+                            <option value="grok-beta">Grok</option>
                         </optgroup>
                         <optgroup label="Groq (Latest)">
-                            <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill (Hot)</option>
+                          
                             <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Latest)</option>
                             <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fastest)</option>
                         </optgroup>
@@ -615,10 +615,6 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenSettings, 
                         <optgroup label="AWS Bedrock">
                             <option value="us.meta.llama4-maverick-17b-instruct-v1:0">Llama 4 Maverick (AWS US)</option>
                             <option value="us.anthropic.claude-sonnet-4-6">Claude 4.6 Sonnet (AWS US)</option>
-                        </optgroup>
-                        <optgroup label="Other (Groq)">
-                            <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
-                            <option value="qwen-2.5-32b">Qwen 2.5 32B</option>
                         </optgroup>
                     </select>
                 </div>
@@ -646,6 +642,8 @@ export const InputForm: React.FC<InputFormProps> = ({ onSubmit, onOpenSettings, 
                         </optgroup>
                         <optgroup label="Cloudflare (New)">
                              <option value="cf-flux-schnell">Flux 1 Schnell (Cloudflare)</option>
+<option value="cf-flux-2-dev">Flux 2 dev (Cloudflare)</option>
+<option value="cf-flux-2-klein">Flux 2 klein (Cloudflare)</option>
                         </optgroup>
                         <optgroup label="Hugging Face (Requires Token)">
                             <option value="hf-flux-dev">FLUX.1-dev (HuggingFace)</option>
