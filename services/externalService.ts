@@ -882,9 +882,8 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
                 provider: "Cloudflare",
                 url: targetUrl,
                 headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
-                // KEMBALI KE PAYLOAD PALING AMAN (Hanya Prompt):
-                payload: { prompt: prompt }, 
-                isBlob: true
+                payload: { prompt: prompt }, // Kembali ke payload murni
+                isBlob: false // 🔥 KUNCI PERBAIKAN: Cloudflare mengirim JSON, BUKAN Blob mentah!
             })
         });
 
@@ -894,12 +893,20 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
         }
         
         const data = await response.json() as any;
-        return `data:image/jpeg;base64,${data.base64}`;
+        // Parsing hasil JSON dari Cloudflare dengan aman
+        if (data.result && data.result.image) {
+            return `data:image/jpeg;base64,${data.result.image}`;
+        } else if (data.base64) {
+            return `data:image/jpeg;base64,${data.base64}`;
+        } else {
+            throw new Error("Invalid format from Cloudflare API");
+        }
     } catch (error) {
         console.error("CF Flux Error:", error);
         throw error;
     }
 };
+
 
 
 // --- HUGGING FACE IMAGE GENERATION ---
