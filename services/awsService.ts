@@ -427,143 +427,96 @@ export const generateScenesBedrock = async (formData: FormData, strategy: Partia
     const outputLanguage = formData.constraints.language === 'en' ? 'English' : 'Indonesian (Bahasa Indonesia)';
     const targetSceneCount = formData.constraints.scene_count || 5;
 
-        const systemPrompt = `
-    You are an Elite TikTok/Reels Creative Director & Direct-Response Copywriter.
-    Your goal is to engineer viral, high-converting UGC (User Generated Content) concepts.
-    
-    RULES FOR STRATEGY:
-    1. AVOID CLICHES: Never use generic openings like "Are you tired of...". Use Pattern Interrupts (Visual hooks, bold statements, contrarian opinions, or ASMR/sensory triggers).
-    2. PSYCHOLOGY: Base the angle on deep psychological triggers (Status, FOMO, Laziness, Insecurity, or Desire for Aesthetic).
-    3. GEN-Z/MILLENNIAL TONE: Keep the tone authentic, conversational, and native to short-form platforms.
-    
+    const systemPrompt = `
+    You are an Elite UGC Scriptwriter & Expert AI Cinematographer.
+    Your job is to translate a viral strategy into a frame-by-frame production script.
+
+    STRICT PACING RULES:
+    - TikTok/Reels move FAST. Keep scenes between 2 to 6 seconds max.
+    - SCENE 1 MUST be a 3-second visual and auditory Pattern Interrupt.
+    - Show, Don't Tell: Match visuals exactly to the spoken audio.
+
     OUTPUT EXACTLY IN THIS JSON FORMAT:
     {
-      "concept_title": "string (Catchy, internal agency name for this concept)",
-      "hook_rationale": "string (Why will this stop a user from scrolling within the first 3 seconds?)",
-      "analysis_report": {
-        "audience_persona": "string (Ultra-specific target, e.g., 'Burnt-out corporate girlies in their 20s')",
-        "core_pain_points": ["string", "string"],
-        "emotional_triggers": ["string"],
-        "competitor_gap": "string (What are competitors ignoring that we will highlight?)",
-        "winning_angle_logic": "string (The psychological framework used, e.g., PAS, Us-vs-Them, or Secret Hack)"
-      },
-      "brand_dna": {
-        "voice_traits": ["string", "string", "string"],
-        "cta_style": "string (How to ask for the sale naturally)",
-        "audience_guess": "string",
-        "genz_style_rules": ["string (e.g., 'Don't sound like a TV commercial')"],
-        "taboo_words": ["string"]
-      },
-      "product_truth_sheet": {
-        "core_facts": ["string"],
-        "required_disclaimer": "string",
-        "safe_benefit_phrases": ["string"],
-        "forbidden_claims": ["string"]
-      }
+      "compliance_check": "Checked",
+      "caption": "string",
+      "cta_button": "string",
+      "scenes": [
+        {
+          "seconds": "string",
+          "visual_description": "string",
+          "audio_script": "string",
+          "on_screen_text": "string",
+          "media_prompt_details": {
+            "image_prompt": "string",
+            "image_negative": "text, watermark",
+            "video_prompt": "string",
+            "video_negative": "text, watermark",
+            "camera_movement": "string",
+            "key_action": "string",
+            "video_params": { "duration": "string", "fps": 30, "aspect_ratio": "9:16", "motion_strength": "5" }
+          }
+        }
+      ]
     }
     `;
 
     const userPrompt = `
-    BRAND INFO:
-    - Name: ${formData.brand.name}
-    - Requested Tone: ${formData.brand.tone_hint_optional || 'Native UGC, Authentic, Engaging'}
+    STRATEGY TO EXECUTE:
+    - Concept: ${strategy.concept_title}
+    - Hook Rationale: ${strategy.hook_rationale}
+
+    CONSTRAINTS:
+    - Target Duration: ${formData.constraints.vo_duration_seconds} seconds
+    - Target Scenes: ${targetSceneCount}
+    - Language: ${outputLanguage}
+
+    VISUAL DIRECTION:
+    - Art Style: ${formData.visual_settings?.art_style || 'Cinematic'}
+    - Lighting: ${formData.visual_settings?.lighting || 'Natural'}
+    - Camera Angle: ${formData.visual_settings?.camera_angle || 'Eye-level'}
+
+    ${variationHint ? `\nCRITICAL VARIATION INSTRUCTION:\n${variationHint}` : ""}
     
-    PRODUCT INFO:
-    - Type/Item: ${formData.product.type}
-    - Key Feature: ${formData.product.material}
-    - Marketing Objective: ${formData.product.objective}
-    - Requested Angle: ${formData.product.main_angle_optional}
-    
-    CONTEXT / SCRAPED DATA:
-    ${contextText}
-    
-    TARGET SETTINGS:
-    - Language: ${formData.constraints.language === 'en' ? 'English' : 'Indonesian (Use native, natural slang. If ID, use Jaksel or casual conversational style depending on the product).'}
-    - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
-    
-    Task: Analyze the inputs and generate the underlying viral strategy json.
+    Write the scenes now.
     `;
 
-
     let body: any = {};
-    
     if (modelId.includes("meta.llama")) {
         body = {
-            prompt: `
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-${systemPrompt}
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-${userPrompt}
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-`,
-            max_gen_len: 2048,
-            temperature: 0.7,
-            top_p: 0.9
+            prompt: `\n<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n${systemPrompt}\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n${userPrompt}\n<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n`,
+            max_gen_len: 2048, temperature: 0.7, top_p: 0.9
         };
     } else if (modelId.includes("amazon.nova")) {
-         body = {
-             system: [{ text: systemPrompt }],
-             messages: [{ role: "user", content: [{ text: userPrompt }] }],
-             inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 }
-         };
+         body = { system: [{ text: systemPrompt }], messages: [{ role: "user", content: [{ text: userPrompt }] }], inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 } };
     } else if (modelId.includes("anthropic.claude")) {
-         body = {
-             anthropic_version: "bedrock-2023-05-31",
-             max_tokens: 4096,
-             system: systemPrompt,
-             messages: [
-                 { role: "user", content: userPrompt }
-             ],
-             temperature: 0.7
-         };
+         body = { anthropic_version: "bedrock-2023-05-31", max_tokens: 4096, system: systemPrompt, messages: [ { role: "user", content: userPrompt } ], temperature: 0.7 };
     }
 
     try {
         const response = await fetchWithTimeout(AWS_PROXY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                region,
-                accessKeyId,
-                secretAccessKey,
-                modelId,
-                body
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ region, accessKeyId, secretAccessKey, modelId, body })
         });
 
-        if (!response.ok) {
-            const err = await response.json() as any;
-            throw new Error(err.error || 'AWS Bedrock Scenes Failed');
-        }
-
+        if (!response.ok) throw new Error('AWS Bedrock Scenes Failed');
         const data = await response.json() as any;
+        
         let jsonString = "";
-
-        if (modelId.includes("meta.llama")) {
-            jsonString = data.generation;
-        } else if (modelId.includes("amazon.nova")) {
-            jsonString = data.output.message.content[0].text;
-        } else if (modelId.includes("anthropic.claude")) {
-            jsonString = data.content[0].text;
-        }
+        if (modelId.includes("meta.llama")) jsonString = data.generation;
+        else if (modelId.includes("amazon.nova")) jsonString = data.output.message.content[0].text;
+        else if (modelId.includes("anthropic.claude")) jsonString = data.content[0].text;
 
         const clean = jsonString.replace(/```json\s*|\s*```/g, '').trim();
-        
-        // Robust JSON Extraction
         const start = clean.indexOf('{');
         const end = clean.lastIndexOf('}');
-        
-        if (start !== -1 && end !== -1) {
-            return JSON.parse(clean.substring(start, end + 1));
-        }
-        
-        return JSON.parse(clean);
-
+        return JSON.parse(start !== -1 && end !== -1 ? clean.substring(start, end + 1) : clean);
     } catch (error) {
         console.error("Bedrock Scenes Error:", error);
         throw error;
     }
 };
+
 
 export const analyzeReferenceImageBedrock = async (base64Image: string, type: 'face' | 'outfit', _modelId: string = "us.anthropic.claude-sonnet-4-6"): Promise<string> => {
     const accessKeyId = getStoredAwsAccessKey().trim();
