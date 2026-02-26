@@ -879,10 +879,17 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
             body: JSON.stringify({
                 provider: "Cloudflare",
                 url: targetUrl,
-                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
-                payload: { prompt: prompt }, // 🔥 FIX 1: Hapus num_steps
-                isBlob: true // 🔥 FIX 2: Ubah jadi TRUE karena CF mengembalikan file mentah
+                                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
+                // KITA KIRIM PAKET LENGKAP AGAR SERVER TIDAK BINGUNG:
+                payload: {
+                    prompt: prompt,
+                    num_steps: 20, // Jumlah langkah standar yang aman
+                    height: 1024,  // Resolusi standar
+                    width: 1024    // Resolusi standar
+                },
+                isBlob: true
             })
+
         });
 
         if (!response.ok) {
