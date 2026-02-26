@@ -278,10 +278,11 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                let modelId = "@cf/black-forest-labs/flux-1-schnell"; // Default
                
                if (activeImageModel === 'cf-flux-2-dev') {
-                   modelId = "@cf/black-forest-labs/flux-2-dev";
-               } else if (activeImageModel === 'cf-flux-2-klein') {
-                   modelId = "@cf/black-forest-labs/flux-2-klein-9b";
-               }
+                   modelId = "@cf/black-forest-labs/flux-2-dev"; } 
+               else if (activeImageModel === 'cf-flux-2-klein') {
+                   modelId = "@cf/black-forest-labs/flux-2-klein-9b"; }
+            else if (activeImageModel === 'cf-stable-diffusion-xl-lightning') {
+                   modelId = "@cf/bytedance/stable-diffusion-xl-lightning"; } 
 
 // Sekarang kita oper activeAspectRatio dari UI ke backend
                imageUrl = await generateImageCloudflare(promptToUse, modelId);
