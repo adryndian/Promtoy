@@ -393,13 +393,13 @@ export const generateScenes = async (formData: FormData, strategy: Partial<Gener
     - Language: ${outputLanguage}
     - Market Nuances: ${formData.constraints.indonesian_nuances || 'None specified'}
 
-    VISUAL DIRECTION:
-    - Lighting: ${visualSettings.lighting}
-    - Camera Angle: ${visualSettings.camera_angle}
-    - Art Style: ${visualSettings.art_style}
-    - Shot Type: ${visualSettings.shot_type || 'Medium shot'}
-    - Visual Effects: ${visualSettings.visual_effects || 'None'}
-    
+       VISUAL DIRECTION:
+    - Lighting: ${visualSettings?.lighting || 'Natural'}
+    - Angle: ${visualSettings?.camera_angle || 'Eye Level'}
+    - Style: ${visualSettings?.art_style || 'Cinematic'}
+    - Shot Type: ${visualSettings?.shot_type || 'Medium shot'}
+    - Visual Effects: ${visualSettings?.visual_effects || 'None'}
+
     ${faceLock}
     ${outfitLock}
     
