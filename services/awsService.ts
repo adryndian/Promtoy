@@ -518,6 +518,7 @@ export const generateScenesBedrock = async (formData: FormData, strategy: Partia
 };
 
 
+
 export const analyzeReferenceImageBedrock = async (base64Image: string, type: 'face' | 'outfit', _modelId: string = "us.anthropic.claude-sonnet-4-6"): Promise<string> => {
     const accessKeyId = getStoredAwsAccessKey().trim();
     const secretAccessKey = getStoredAwsSecretKey().trim();
