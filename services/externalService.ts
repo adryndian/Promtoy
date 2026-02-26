@@ -866,12 +866,14 @@ export const analyzeImageForBriefCloudflare = async (base64Image: string): Promi
 
 // --- CLOUDFLARE IMAGE GENERATION (Flux Schnell) ---
 // 1. Ganti fungsi Cloudflare Image
-export const generateImageCloudflare = async (prompt: string): Promise<string> => {
+// --- CLOUDFLARE IMAGE GENERATION ---
+export const generateImageCloudflare = async (prompt: string, modelId: string = "@cf/black-forest-labs/flux-1-schnell"): Promise<string> => {
     const accountId = getStoredCloudflareId();
     const apiToken = getStoredCloudflareToken();
     if (!accountId || !apiToken) throw new Error("Cloudflare Credentials missing.");
 
-    const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/black-forest-labs/flux-1-schnell`;
+    // URL sekarang menggunakan modelId agar dinamis
+    const targetUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${modelId}`;
 
     try {
         const response = await fetchWithTimeout('/api/proxy', {
@@ -886,7 +888,11 @@ export const generateImageCloudflare = async (prompt: string): Promise<string> =
             })
         });
 
-        if (!response.ok) throw new Error("Cloudflare Proxy Failed");
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(`CF Proxy Error: ${errData.error || response.statusText}`);
+        }
+        
         const data = await response.json() as any;
         return `data:image/jpeg;base64,${data.result.image}`;
     } catch (error) {
@@ -895,50 +901,10 @@ export const generateImageCloudflare = async (prompt: string): Promise<string> =
     }
 };
 
+
 //togeteher ai
 
-export const generateImageTogether = async (prompt: string, model: string = "black-forest-labs/FLUX.1-schnell"): Promise<string> => {
-    const apiKey = localStorage.getItem('TOGETHER_API_KEY');
-    if (!apiKey) throw new Error("Together AI API Key missing. Please set it in Settings.");
 
-    try {
-        // 🔥 Pastikan fetch mengarah ke '/api/proxy' 🔥
-        const response = await fetch('/api/proxy', {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                provider: "TogetherAI",
-                url: "https://api.together.xyz/v1/images/generations",
-                headers: { 
-                    "Authorization": `Bearer ${apiKey}`, 
-                    "Content-Type": "application/json" 
-                },
-                payload: {
-                    model: model,
-                    prompt: prompt,
-                    width: 1024,
-                    height: 1024,
-                    steps: 4,
-                    n: 1,
-                    response_format: "b64_json"
-                },
-                isBlob: false // Together mengembalikan JSON, bukan Blob
-            })
-        });
-
-        if (!response.ok) {
-            const errData = await response.json() as any;
-            throw new Error(errData.error || "Together AI Proxy Failed");
-        }
-        
-        const data = await response.json() as any;
-        // Together AI mengembalikan base64 murni di dalam properti b64_json
-        return `data:image/png;base64,${data.data[0].b64_json}`;
-    } catch (error) {
-        console.error("Together AI Error:", error);
-        throw error;
-    }
-};
 
 
 

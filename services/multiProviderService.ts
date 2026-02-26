@@ -5,16 +5,20 @@ import { GeneratedAsset } from '../types';
 // Ganti fungsi Together AI
 export const generateImageTogether = async (prompt: string, model: string = "black-forest-labs/FLUX.1-schnell"): Promise<string> => {
     const apiKey = localStorage.getItem('TOGETHER_API_KEY');
-    if (!apiKey) throw new Error("Together AI API Key missing.");
+    if (!apiKey) throw new Error("Together AI API Key missing. Please set it in Settings.");
 
     try {
+        // 🔥 Pastikan fetch mengarah ke '/api/proxy' 🔥
         const response = await fetch('/api/proxy', {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 provider: "TogetherAI",
                 url: "https://api.together.xyz/v1/images/generations",
-                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                headers: { 
+                    "Authorization": `Bearer ${apiKey}`, 
+                    "Content-Type": "application/json" 
+                },
                 payload: {
                     model: model,
                     prompt: prompt,
@@ -24,12 +28,17 @@ export const generateImageTogether = async (prompt: string, model: string = "bla
                     n: 1,
                     response_format: "b64_json"
                 },
-                isBlob: false
+                isBlob: false // Together mengembalikan JSON, bukan Blob
             })
         });
 
-        if (!response.ok) throw new Error("Together AI Proxy Failed");
+        if (!response.ok) {
+            const errData = await response.json() as any;
+            throw new Error(errData.error || "Together AI Proxy Failed");
+        }
+        
         const data = await response.json() as any;
+        // Together AI mengembalikan base64 murni di dalam properti b64_json
         return `data:image/png;base64,${data.data[0].b64_json}`;
     } catch (error) {
         console.error("Together AI Error:", error);
