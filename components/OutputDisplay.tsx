@@ -12,7 +12,8 @@ import { generateImageHuggingFace, generateVideoHuggingFace, generateImageCloudf
 import { generateImageTogether, generateImageDashscope, generateVideoDashscope } from '../services/multiProviderService';
 import { generateImageBedrock, generateSpeechBedrock } from '../services/awsService';
 import { fetchElevenLabsVoices, generateElevenLabsSpeech, ElevenLabsVoice, ELEVENLABS_MODELS, ElevenLabsSettings } from '../services/elevenLabsService';
-import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight } from 'lucide-react';
+import JSZip from 'jszip';
+import { Copy, Check, Clapperboard, Play, Loader2, Mic, Download, Pause, Image, Settings2, Sparkles, Monitor, Tablet, Smartphone, Maximize2, X, Film, Wand2, Video as VideoIcon, Volume2, SlidersHorizontal, Info, FileText, FileJson, Printer, Headphones, Palette, Aperture, Layers, Split, Smile, ChevronDown, ChevronUp, Lightbulb, Target, Shield, Users, Brain, Megaphone, RefreshCw, ChevronRight, Archive } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 
 const GEMINI_VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
@@ -478,6 +479,83 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
     printWindow.document.write(html);
     printWindow.document.close();
   };
+  
+    const [isExportingZip, setIsExportingZip] = useState(false);
+
+  const handleExportZIP = async () => {
+    if (!data) return;
+    setIsExportingZip(true);
+    
+    try {
+        const zip = new JSZip();
+        const scenes = getActiveScenes();
+
+        // 1. Masukkan Naskah Teks
+        let txt = `TITLE: ${data.concept_title}\nHOOK: ${data.hook_rationale}\nANGLE: ${data.analysis_report?.winning_angle_logic}\n\n`;
+        scenes.forEach((scene, i) => {
+            txt += `SCENE ${i + 1} (${scene.seconds}s)\n`;
+            txt += `VISUAL: ${scene.visual_description}\n`;
+            txt += `AUDIO: ${scene.audio_script}\n`;
+            txt += `OVERLAY: ${scene.on_screen_text}\n\n`;
+        });
+        zip.file("1_Master_Script.txt", txt);
+
+        // 2. Fungsi pembantu untuk mengunduh media menjadi Blob
+        const fetchAsBlob = async (url: string) => {
+            const res = await fetch(url);
+            return await res.blob();
+        };
+
+        // 3. Masukkan Semua Media per Scene
+        const mediaPromises = scenes.map(async (scene, i) => {
+            const cacheKey = `${activeVariationIndex}-${i}`;
+            const folderName = `Scene_${i + 1}`;
+            const folder = zip.folder(folderName);
+            
+            if (!folder) return;
+
+            // Ambil Video atau Gambar
+            if (previewVideos[cacheKey]) {
+                const blob = await fetchAsBlob(previewVideos[cacheKey]);
+                folder.file(`Video_${i + 1}.mp4`, blob);
+            } else if (previewImages[cacheKey]) {
+                const blob = await fetchAsBlob(previewImages[cacheKey]);
+                const ext = previewImages[cacheKey].includes('png') ? 'png' : 'jpg';
+                folder.file(`Image_${i + 1}.${ext}`, blob);
+            }
+
+            // Ambil Voiceover
+            if (audioUrls[cacheKey]) {
+                const blob = await fetchAsBlob(audioUrls[cacheKey]);
+                folder.file(`Voiceover_${i + 1}.mp3`, blob);
+            }
+        });
+
+        await Promise.all(mediaPromises);
+
+        // 4. Generate dan Download ZIP
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(zipBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${data.concept_title.replace(/\s+/g, '_')}_Assets.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error("ZIP Export failed", error);
+        alert("Gagal membuat file ZIP. Pastikan semua gambar dan audio sudah di-generate.");
+    } finally {
+        setIsExportingZip(false);
+    }
+  };
+
+  
+  
+  
+  
 
   if (!data) return (
     <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl bg-white/40 p-8">
@@ -577,7 +655,19 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                 <div className="w-px h-4 bg-slate-200 hidden sm:block dark:bg-slate-600"></div>
                 <button onClick={handleExportJSON} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 hover:shadow-sm transition-all dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-brand-400"><FileJson className="w-3.5 h-3.5" /> JSON</button>
                 <div className="w-px h-4 bg-slate-200 hidden sm:block dark:bg-slate-600"></div>
-                <button onClick={handlePrint} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 hover:shadow-sm transition-all dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-brand-400"><Printer className="w-3.5 h-3.5" /> PDF</button>
+                                <button onClick={handlePrint} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:text-brand-600 hover:shadow-sm transition-all dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-brand-400"><Printer className="w-3.5 h-3.5" /> PDF</button>
+                
+                {/* TOMBOL ZIP BARU */}
+                <div className="w-px h-4 bg-slate-200 hidden sm:block dark:bg-slate-600"></div>
+                <button 
+                    onClick={handleExportZIP} 
+                    disabled={isExportingZip}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black bg-brand-50 text-brand-600 border border-brand-200 hover:bg-brand-500 hover:text-white hover:shadow-md transition-all disabled:opacity-50 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-900/50 dark:hover:bg-brand-600 dark:hover:text-white"
+                >
+                    {isExportingZip ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />} 
+                    {isExportingZip ? 'PACKING...' : 'ZIP ALL ASSETS'}
+                </button>
+
             </div>
           </div>
 
