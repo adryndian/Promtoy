@@ -283,7 +283,9 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                    modelId = "@cf/black-forest-labs/flux-2-klein-9b";
                }
 
-               imageUrl = await generateImageCloudflare(promptToUse, modelId);
+// Sekarang kita oper activeAspectRatio dari UI ke backend
+               imageUrl = await generateImageCloudflare(promptToUse, modelId, activeAspectRatio);
+
           } 
 
   
