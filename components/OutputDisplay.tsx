@@ -279,6 +279,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                
                if (activeImageModel === 'cf-flux-2-dev') {
                    modelId = "@cf/black-forest-labs/flux-2-dev"; } 
+                   else if (activeImageModel === 'cf-flux-2-klein-4b') {
+                   modelId = "@cf/black-forest-labs/flux-2-klein-4b"; } 
                else if (activeImageModel === 'cf-flux-2-klein') {
                    modelId = "@cf/black-forest-labs/flux-2-klein-9b"; }
             else if (activeImageModel === 'cf-stable-diffusion-xl-lightning') {
