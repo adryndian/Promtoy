@@ -881,9 +881,10 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
             body: JSON.stringify({
                 provider: "Cloudflare",
                 url: targetUrl,
-                headers: { "Authorization": `Bearer ${apiToken}`, "Content-Type": "application/json" },
-                payload: { prompt: prompt }, // Kembali ke payload murni
-                isBlob: false // 🔥 KUNCI PERBAIKAN: Cloudflare mengirim JSON, BUKAN Blob mentah!
+                headers: { "Authorization": `Bearer ${apiToken}` }, // Content-Type diatur otomatis oleh proxy.ts
+                payload: { prompt: prompt },
+                isBlob: false, // Cloudflare membalas dengan JSON, bukan file mentah!
+                isMultipart: true // 🔥 WAJIB UNTUK MENGHINDARI ERROR FLUX.2
             })
         });
 
@@ -893,19 +894,16 @@ export const generateImageCloudflare = async (prompt: string, modelId: string = 
         }
         
         const data = await response.json() as any;
-        // Parsing hasil JSON dari Cloudflare dengan aman
         if (data.result && data.result.image) {
             return `data:image/jpeg;base64,${data.result.image}`;
-        } else if (data.base64) {
-            return `data:image/jpeg;base64,${data.base64}`;
-        } else {
-            throw new Error("Invalid format from Cloudflare API");
         }
+        throw new Error("Invalid Cloudflare Image format");
     } catch (error) {
         console.error("CF Flux Error:", error);
         throw error;
     }
 };
+
 
 
 
