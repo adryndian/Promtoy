@@ -741,6 +741,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
     <option value="cf-flux-2-dev" className="dark:bg-slate-800">CF Flux 2 (Dev)</option>
     <option value="cf-flux-2-klein" className="dark:bg-slate-800">CF Flux 2 (Klein 9B)</option>
     <option value="cf-flux-schnell" className="dark:bg-slate-800">CF Flux 1 (Schnell)</option>
+<option value="cf-stable-diffusion-xl-lightning" className="dark:bg-slate-800">CF SD XL</option>
+    <option value="cf-flux-2-klein-4b className="dark:bg-slate-800">CF Flux 4b</option>
     <option value="amazon.titan-image-generator-v2:0" className="dark:bg-slate-800">AWS Titan v2</option>
     <option value="together-flux" className="dark:bg-slate-800">Together FLUX</option>
     <option value="hf-flux-dev" className="dark:bg-slate-800">HF FLUX Dev</option>
