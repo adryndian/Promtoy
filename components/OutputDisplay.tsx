@@ -284,7 +284,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({ onUpdate }) => {
                }
 
 // Sekarang kita oper activeAspectRatio dari UI ke backend
-               imageUrl = await generateImageCloudflare(promptToUse, modelId, activeAspectRatio);
+               imageUrl = await generateImageCloudflare(promptToUse, modelId);
 
           } 
 
