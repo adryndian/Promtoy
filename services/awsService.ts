@@ -347,7 +347,7 @@ ${systemPrompt}
 ${userPrompt}
 <|eot_id|><|start_header_id|>assistant<|end_header_id|>
 `,
-            max_gen_len: 2048,
+            max_gen_len: 4096,
             temperature: 0.7,
             top_p: 0.9
         };
@@ -485,7 +485,7 @@ export const generateScenesBedrock = async (formData: FormData, strategy: Partia
     if (modelId.includes("meta.llama")) {
         body = {
             prompt: `\n<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n${systemPrompt}\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n${userPrompt}\n<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n`,
-            max_gen_len: 2048, temperature: 0.7, top_p: 0.9
+            max_gen_len: 4096, temperature: 0.7, top_p: 0.9
         };
     } else if (modelId.includes("amazon.nova")) {
          body = { system: [{ text: systemPrompt }], messages: [{ role: "user", content: [{ text: userPrompt }] }], inferenceConfig: { max_new_tokens: 2048, temperature: 0.7 } };
